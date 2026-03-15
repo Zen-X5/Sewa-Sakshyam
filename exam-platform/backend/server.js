@@ -5,6 +5,14 @@ const express = require("express");
 const http = require("http");
 const { Server } = require("socket.io");
 
+// Prevent unhandled errors from crashing the process mid-exam
+process.on("uncaughtException", (err) => {
+  console.error("[uncaughtException] — process kept alive:", err);
+});
+process.on("unhandledRejection", (reason) => {
+  console.error("[unhandledRejection] — process kept alive:", reason);
+});
+
 dotenv.config({ path: path.resolve(__dirname, ".env") });
 
 const connectDB = require("./config/db");

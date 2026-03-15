@@ -346,16 +346,10 @@ a {
   width: 52px;
   height: 52px;
   border-radius: 8px;
-  background: rgba(255,255,255,0.12);
+  background: #ffffff url("/logo.jpeg") center/cover no-repeat;
   border: 1px solid rgba(255,255,255,0.25);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 18px;
-  font-weight: 900;
-  color: #fff;
-  letter-spacing: -1px;
   flex-shrink: 0;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .home-site-name {
@@ -574,10 +568,23 @@ a {
 }
 
 .gov-login-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   color: #fff;
   font-size: 16px;
   font-weight: 800;
   letter-spacing: 0.3px;
+}
+
+.gov-login-brand::before {
+  content: "";
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #ffffff url("/logo.jpeg") center/cover no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  flex-shrink: 0;
 }
 
 .gov-login-badge {
@@ -679,9 +686,22 @@ a {
 }
 
 .adm-nav-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: 19px;
   font-weight: 800;
   letter-spacing: 0.2px;
+}
+
+.adm-nav-brand::before {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #ffffff url("/logo.jpeg") center/cover no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
 }
 
 .adm-nav-right {
@@ -1311,10 +1331,23 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
 }
 
 .stu-brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
   font-size: 20px;
   font-weight: 800;
   color: #ffffff;
   line-height: 1.1;
+}
+
+.stu-brand::before {
+  content: "";
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: #ffffff url("/logo.jpeg") center/cover no-repeat;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  flex-shrink: 0;
 }
 
 .stu-brand-sub {
@@ -1731,8 +1764,8 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
 @media (max-width: 480px) {
 
   /* ── Home ── */
-  .home-header-brand { flex-direction: column; align-items: flex-start; gap: 4px; }
-  .home-logo-box { display: none; }
+  .home-header-brand { gap: 8px; }
+  .home-logo-box { width: 36px; height: 36px; }
   .home-site-name { font-size: 15px; }
   .home-welcome-desc { font-size: 13px; }
   .home-notice { font-size: 11px; padding: 7px 14px; }
@@ -1747,6 +1780,7 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
   /* ── Admin shell ── */
   .adm-nav { padding: 0 12px; }
   .adm-nav-brand { font-size: 14px; }
+  .adm-nav-brand::before { width: 22px; height: 22px; }
   .adm-main { padding: 12px 10px 40px; }
   .adm-page-title h1 { font-size: 18px; }
   .adm-card-body { padding: 12px; }
@@ -1770,6 +1804,7 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
   .stu-header { padding: 0 12px; }
   .stu-header-inner { flex-wrap: wrap; min-height: 52px; gap: 8px; padding: 8px 0; }
   .stu-brand { font-size: 14px; }
+  .stu-brand::before { width: 22px; height: 22px; }
   .stu-brand-sub { letter-spacing: 0; }
   .stu-main { padding: 12px 10px 36px; }
   .stu-card { padding: 12px; }

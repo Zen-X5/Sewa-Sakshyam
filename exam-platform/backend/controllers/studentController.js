@@ -7,6 +7,10 @@ const Section = require("../models/Section");
 const User = require("../models/User");
 const { evaluateAttempt } = require("../services/scoringService");
 const { scheduleExamStartBroadcast } = require("../services/examStartRealtimeService");
+const {
+  getCachedExamRuntime,
+  warmExamRuntimeCache,
+} = require("../services/examRuntimeCacheService");
 
 const otpVerifiedGraceMinutes = Number(process.env.OTP_VERIFIED_GRACE_MINUTES || 30);
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
@@ -56,23 +60,35 @@ const finalizeAttempt = async (attempt, reason = "manual") => {
 
 const getPublishedExams = async (req, res) => {
   try {
-    const exams = await Exam.find({ published: true }).sort({ scheduledAt: 1, createdAt: -1 }).lean();
+    const exams = await Exam.find({ published: true })
+      .sort({ scheduledAt: 1, createdAt: -1 })
+      .select("_id title duration scheduledAt markingScheme published createdAt")
+      .lean();
     const examIds = exams.map((exam) => exam._id);
 
-    const sections = await Section.find({ examId: { $in: examIds } }).lean();
-    const questions = await Question.find({ examId: { $in: examIds } }).lean();
+    if (examIds.length === 0) {
+      return res.json([]);
+    }
+
+    const sectionCounts = await Section.aggregate([
+      { $match: { examId: { $in: examIds } } },
+      { $group: { _id: "$examId", count: { $sum: 1 } } },
+    ]);
+
+    const questionCounts = await Question.aggregate([
+      { $match: { examId: { $in: examIds } } },
+      { $group: { _id: "$examId", count: { $sum: 1 } } },
+    ]);
 
     const sectionCountMap = new Map();
     const questionCountMap = new Map();
 
-    for (const section of sections) {
-      const key = String(section.examId);
-      sectionCountMap.set(key, (sectionCountMap.get(key) || 0) + 1);
+    for (const section of sectionCounts) {
+      sectionCountMap.set(String(section._id), section.count || 0);
     }
 
-    for (const question of questions) {
-      const key = String(question.examId);
-      questionCountMap.set(key, (questionCountMap.get(key) || 0) + 1);
+    for (const question of questionCounts) {
+      questionCountMap.set(String(question._id), question.count || 0);
     }
 
     return res.json(
@@ -90,31 +106,54 @@ const getPublishedExams = async (req, res) => {
 const getExamInstructions = async (req, res) => {
   try {
     const { examId } = req.params;
-    const exam = await Exam.findOne({ _id: examId, published: true }).lean();
+    const runtime = await getCachedExamRuntime(examId);
 
-    if (!exam) {
+    if (!runtime?.exam || !runtime.exam.published) {
       return res.status(404).json({ message: "Exam not found" });
     }
 
-    const sections = await Section.find({ examId }).sort({ order: 1, createdAt: 1 }).lean();
-    const questions = await Question.find({ examId }).lean();
-
-    const sectionQuestionCount = new Map();
-    for (const question of questions) {
+    const sectionQuestionCount = new Map(runtime.sections.map((section) => [String(section._id), 0]));
+    for (const question of runtime.questions) {
       const key = String(question.sectionId);
       sectionQuestionCount.set(key, (sectionQuestionCount.get(key) || 0) + 1);
     }
 
     return res.json({
-      ...exam,
-      totalQuestions: questions.length,
-      sections: sections.map((section) => ({
+      ...runtime.exam,
+      totalQuestions: runtime.questions.length,
+      sections: runtime.sections.map((section) => ({
         ...section,
         questionCount: sectionQuestionCount.get(String(section._id)) || 0,
       })),
     });
   } catch (error) {
     return res.status(500).json({ message: error.message || "Failed to fetch instructions" });
+  }
+};
+
+const getExamPreload = async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const runtime = await getCachedExamRuntime(examId);
+
+    if (!runtime?.exam || !runtime.exam.published) {
+      return res.status(404).json({ message: "Exam not found" });
+    }
+
+    return res.json({
+      exam: {
+        _id: runtime.exam._id,
+        title: runtime.exam.title,
+        duration: runtime.exam.duration,
+        scheduledAt: runtime.exam.scheduledAt,
+        markingScheme: runtime.exam.markingScheme,
+      },
+      sections: runtime.sections,
+      questions: runtime.questions,
+      serverTime: new Date().toISOString(),
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to preload exam" });
   }
 };
 
@@ -140,6 +179,7 @@ const joinExamWithVerifiedEmail = async (req, res) => {
     if (exam.scheduledAt) {
       scheduleExamStartBroadcast(exam._id, exam.scheduledAt);
     }
+    warmExamRuntimeCache(exam._id).catch(() => null);
 
     const otpRecord = await EmailOtp.findOne({ email: normalizedEmail });
     if (!otpRecord || !otpRecord.verifiedAt) {
@@ -218,10 +258,15 @@ const startExamAttempt = async (req, res) => {
       userId: req.user._id,
       examId,
       submitted: false,
-    });
+    }).select("_id examId startTime");
 
     if (existingAttempt) {
-      return res.json(existingAttempt);
+      return res.json({
+        _id: existingAttempt._id,
+        examId: existingAttempt.examId,
+        startTime: existingAttempt.startTime,
+        resumed: true,
+      });
     }
 
     const attempt = await Attempt.create({
@@ -232,7 +277,12 @@ const startExamAttempt = async (req, res) => {
       answers: [],
     });
 
-    return res.status(201).json(attempt);
+    return res.status(201).json({
+      _id: attempt._id,
+      examId: attempt.examId,
+      startTime: attempt.startTime,
+      resumed: false,
+    });
   } catch (error) {
     return res.status(500).json({ message: error.message || "Failed to start exam" });
   }
@@ -251,11 +301,11 @@ const getAttemptState = async (req, res) => {
       return res.status(409).json({ message: "Attempt already submitted", attempt });
     }
 
-    const exam = await Exam.findById(attempt.examId).lean();
-    const sections = await Section.find({ examId: attempt.examId }).sort({ order: 1, createdAt: 1 }).lean();
-    const questions = await Question.find({ examId: attempt.examId }).sort({ order: 1, createdAt: 1 }).lean();
+    const runtime = await getCachedExamRuntime(attempt.examId);
+    if (!runtime?.exam) {
+      return res.status(404).json({ message: "Exam not found" });
+    }
 
-    const sectionMap = new Map(sections.map((section) => [String(section._id), section.name]));
     const answersMap = attempt.answers.reduce((acc, answer) => {
       acc[String(answer.questionId)] = answer.selectedOption;
       return acc;
@@ -265,26 +315,63 @@ const getAttemptState = async (req, res) => {
       attemptId: attempt._id,
       startTime: attempt.startTime,
       exam: {
-        _id: exam._id,
-        title: exam.title,
-        duration: exam.duration,
-        scheduledAt: exam.scheduledAt,
-        markingScheme: exam.markingScheme,
+        _id: runtime.exam._id,
+        title: runtime.exam.title,
+        duration: runtime.exam.duration,
+        scheduledAt: runtime.exam.scheduledAt,
+        markingScheme: runtime.exam.markingScheme,
       },
-      sections,
-      questions: questions.map((question) => ({
-        _id: question._id,
-        sectionId: question.sectionId,
-        sectionName: sectionMap.get(String(question.sectionId)) || "Section",
-        questionText: question.questionText,
-        imageUrl: question.imageUrl || "",
-        options: question.options,
-        order: question.order,
-      })),
+      sections: runtime.sections,
+      questions: runtime.questions,
       answers: answersMap,
     });
   } catch (error) {
     return res.status(500).json({ message: error.message || "Failed to load attempt" });
+  }
+};
+
+const saveAttemptAnswersBatch = async (req, res) => {
+  try {
+    const { attemptId } = req.params;
+    const incomingAnswers = req.body.answers || {};
+
+    const attempt = await Attempt.findOne({ _id: attemptId, userId: req.user._id });
+    if (!attempt) {
+      return res.status(404).json({ message: "Attempt not found" });
+    }
+
+    if (attempt.submitted) {
+      return res.status(409).json({ message: "Attempt already submitted", submitted: true });
+    }
+
+    const exam = await Exam.findById(attempt.examId).select("duration");
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found" });
+    }
+
+    if (isAttemptExpired(attempt.startTime, exam.duration)) {
+      const result = await finalizeAttempt(attempt, "timer");
+      return res.status(409).json({ message: "Time is over. Attempt submitted", submitted: true, result });
+    }
+
+    const normalizedEntries = Object.entries(incomingAnswers)
+      .filter(([questionId, selectedOption]) => questionId && selectedOption !== undefined)
+      .map(([questionId, selectedOption]) => ({
+        questionId,
+        selectedOption: Number(selectedOption),
+      }))
+      .filter((item) => Number.isInteger(item.selectedOption) && item.selectedOption >= 0 && item.selectedOption <= 3);
+
+    attempt.answers = normalizedEntries;
+    await attempt.save();
+
+    return res.json({
+      saved: true,
+      answerCount: attempt.answers.length,
+      updatedAt: attempt.updatedAt,
+    });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to save answers" });
   }
 };
 
@@ -448,9 +535,11 @@ const getAttemptResult = async (req, res) => {
 module.exports = {
   getPublishedExams,
   getExamInstructions,
+  getExamPreload,
   joinExamWithVerifiedEmail,
   startExamAttempt,
   getAttemptState,
+  saveAttemptAnswersBatch,
   saveAnswer,
   submitAttempt,
   getAttemptResult,

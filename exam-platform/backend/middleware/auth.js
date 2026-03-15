@@ -1,5 +1,4 @@
 const jwt = require("jsonwebtoken");
-const User = require("../models/User");
 
 const protect = async (req, res, next) => {
   const authHeader = req.headers.authorization;
@@ -12,13 +11,11 @@ const protect = async (req, res, next) => {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
 
-    if (!user) {
-      return res.status(401).json({ message: "User not found" });
-    }
-
-    req.user = user;
+    // Attach a lightweight user object from the JWT claims — avoids a DB query on
+    // every authenticated request (saves ~1 query per student per 15-second save).
+    // The JWT is signed and tamper-proof, so id + role are trustworthy.
+    req.user = { _id: decoded.id, id: decoded.id, role: decoded.role };
     return next();
   } catch (error) {
     return res.status(401).json({ message: "Invalid token" });

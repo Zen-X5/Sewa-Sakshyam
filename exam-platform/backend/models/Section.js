@@ -22,4 +22,6 @@ const sectionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+sectionSchema.index({ examId: 1, order: 1, createdAt: 1 });
+
 module.exports = mongoose.model("Section", sectionSchema);

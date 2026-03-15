@@ -7,6 +7,10 @@ const {
   scheduleExamStartBroadcast,
   cancelExamStartBroadcast,
 } = require("../services/examStartRealtimeService");
+const {
+  warmExamRuntimeCache,
+  invalidateExamRuntimeCache,
+} = require("../services/examRuntimeCacheService");
 
 const destroyCloudinaryImage = async (publicId) => {
   if (!publicId) return;
@@ -96,6 +100,14 @@ const togglePublish = async (req, res) => {
     exam.published = Boolean(published);
     await exam.save();
 
+    if (exam.published) {
+      await warmExamRuntimeCache(exam._id);
+      scheduleExamStartBroadcast(exam._id, exam.scheduledAt);
+    } else {
+      cancelExamStartBroadcast(exam._id);
+      invalidateExamRuntimeCache(exam._id);
+    }
+
     return res.json(exam);
   } catch (error) {
     return res.status(500).json({ message: error.message || "Failed to update publish status" });
@@ -123,6 +135,8 @@ const addSection = async (req, res) => {
       name,
       order: sectionCount + 1,
     });
+
+    invalidateExamRuntimeCache(examId);
 
     return res.status(201).json(section);
   } catch (error) {
@@ -152,6 +166,8 @@ const updateSection = async (req, res) => {
     section.name = name.trim();
     await section.save();
 
+    invalidateExamRuntimeCache(section.examId);
+
     return res.json(section);
   } catch (error) {
     return res.status(500).json({ message: error.message || "Failed to update section" });
@@ -174,6 +190,8 @@ const deleteSection = async (req, res) => {
 
     await Question.deleteMany({ sectionId: section._id });
     await Section.deleteOne({ _id: section._id });
+
+    invalidateExamRuntimeCache(section.examId);
 
     return res.json({ message: "Section and related questions deleted" });
   } catch (error) {
@@ -240,6 +258,8 @@ const addQuestion = async (req, res) => {
       order: questionCount + 1,
     });
 
+    invalidateExamRuntimeCache(exam._id);
+
     return res.status(201).json(question);
   } catch (error) {
     return res.status(500).json({ message: error.message || "Failed to add question" });
@@ -282,6 +302,8 @@ const updateQuestion = async (req, res) => {
     question.imagePublicId = newPublicId;
     await question.save();
 
+    invalidateExamRuntimeCache(question.examId);
+
     return res.json(question);
   } catch (error) {
     return res.status(500).json({ message: error.message || "Failed to update question" });
@@ -304,6 +326,8 @@ const deleteQuestion = async (req, res) => {
 
     await destroyCloudinaryImage(question.imagePublicId);
     await Question.deleteOne({ _id: questionId });
+
+    invalidateExamRuntimeCache(question.examId);
 
     return res.json({ message: "Question deleted" });
   } catch (error) {
@@ -331,6 +355,9 @@ const deleteExam = async (req, res) => {
     for (const q of questionsWithImages) {
       await destroyCloudinaryImage(q.imagePublicId);
     }
+
+    cancelExamStartBroadcast(exam._id);
+    invalidateExamRuntimeCache(exam._id);
 
     await Question.deleteMany({ sectionId: { $in: sectionIds } });
     await Section.deleteMany({ examId: exam._id });
@@ -410,6 +437,11 @@ const updateExam = async (req, res) => {
     }
 
     await exam.save();
+
+    invalidateExamRuntimeCache(exam._id);
+    if (exam.published) {
+      await warmExamRuntimeCache(exam._id);
+    }
 
     return res.json(exam);
   } catch (error) {

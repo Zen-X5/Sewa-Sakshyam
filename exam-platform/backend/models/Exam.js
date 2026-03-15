@@ -34,4 +34,7 @@ const examSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+examSchema.index({ published: 1, scheduledAt: 1 });
+examSchema.index({ createdBy: 1, createdAt: -1 });
+
 module.exports = mongoose.model("Exam", examSchema);

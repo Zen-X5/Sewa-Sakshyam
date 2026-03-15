@@ -34,6 +34,9 @@ export default function StartExamPage() {
   const [joined, setJoined] = useState(false);
   const [examStartSignal, setExamStartSignal] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [preloadingExam, setPreloadingExam] = useState(false);
+  const [preloadedExamData, setPreloadedExamData] = useState(null);
+  const [preloadAttempted, setPreloadAttempted] = useState(false);
 
   const scheduleTimestamp = useMemo(() => {
     if (!exam?.scheduledAt) {
@@ -75,6 +78,41 @@ export default function StartExamPage() {
   }, [joined, scheduleTimestamp]);
 
   useEffect(() => {
+    if (!joined || !joinedToken || !params.examId || !scheduleTimestamp) {
+      return;
+    }
+
+    if (preloadedExamData || preloadingExam || preloadAttempted) {
+      return;
+    }
+
+    if (Date.now() >= scheduleTimestamp) {
+      return;
+    }
+
+    if (remainingSeconds <= 0 || remainingSeconds > 30) {
+      return;
+    }
+
+    const preloadExam = async () => {
+      setPreloadingExam(true);
+      setPreloadAttempted(true);
+      try {
+        const payload = await apiRequest(`/student/exams/${params.examId}/preload`, {
+          token: joinedToken,
+        });
+        setPreloadedExamData(payload);
+        sessionStorage.setItem(`exam-preload:${params.examId}`, JSON.stringify(payload));
+      } catch {
+      } finally {
+        setPreloadingExam(false);
+      }
+    };
+
+    preloadExam();
+  }, [joined, joinedToken, params.examId, scheduleTimestamp, remainingSeconds, preloadedExamData, preloadingExam, preloadAttempted]);
+
+  useEffect(() => {
     if (!joined || !joinedToken) {
       return;
     }
@@ -91,6 +129,24 @@ export default function StartExamPage() {
           method: "POST",
           token: joinedToken,
         });
+
+        const cachedPreload = preloadedExamData || (() => {
+          try {
+            const raw = sessionStorage.getItem(`exam-preload:${params.examId}`);
+            return raw ? JSON.parse(raw) : null;
+          } catch {
+            return null;
+          }
+        })();
+
+        const seedPayload = {
+          attemptId: attempt._id,
+          startTime: attempt.startTime || new Date().toISOString(),
+          examData: cachedPreload || null,
+          answers: {},
+        };
+        sessionStorage.setItem(`attempt-seed:${attempt._id}`, JSON.stringify(seedPayload));
+
         router.replace(`/student/exam/${attempt._id}`);
       } catch (err) {
         setError(err.message);
@@ -100,7 +156,7 @@ export default function StartExamPage() {
     };
 
     startAttempt();
-  }, [joined, joinedToken, params.examId, router, scheduleTimestamp, examStartSignal]);
+  }, [joined, joinedToken, params.examId, router, scheduleTimestamp, examStartSignal, preloadedExamData]);
 
   useEffect(() => {
     if (!joined || !params.examId) {
@@ -214,6 +270,8 @@ export default function StartExamPage() {
       setJoinedToken(payload.token);
       setJoined(true);
       setExamStartSignal(false);
+      setPreloadedExamData(null);
+      setPreloadAttempted(false);
 
       if (!payload.exam?.scheduledAt || Date.now() >= new Date(payload.exam.scheduledAt).getTime()) {
         setMessage("Exam has started. Opening questions...");
@@ -290,6 +348,7 @@ export default function StartExamPage() {
                 <p className="stu-muted">Exam starts at: {formatDateTime(exam.scheduledAt)}</p>
                 <div className="stu-timer">Countdown: {formatCountdown(remainingSeconds)}</div>
                 <p className="stu-muted">Questions will open automatically when countdown reaches zero.</p>
+                {preloadingExam ? <p className="stu-muted">Preparing exam paper...</p> : null}
               </>
             ) : (
               <p className="stu-muted">Exam time reached. Loading questions...</p>

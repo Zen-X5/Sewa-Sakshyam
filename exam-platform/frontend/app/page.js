@@ -8,7 +8,7 @@ export default function HomePage() {
       <header className="home-header">
         <div className="home-header-inner">
           <div className="home-header-brand">
-            <div className="home-logo-box">SS</div>
+            <div className="home-logo-box" aria-hidden="true" />
             <div>
               <div className="home-site-name">Sewa Sakshyam</div>
               <div className="home-site-tag">Online Examination Portal</div>
