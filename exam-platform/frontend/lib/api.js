@@ -1,6 +1,7 @@
 import { getAuth } from "./auth";
 
 const normalizeApiBase = (value) => String(value || "").replace(/\/$/, "");
+const productionApiBase = "https://sewa-sakshyam.onrender.com/api";
 
 export const resolveApiBaseUrl = () => {
   if (process.env.NEXT_PUBLIC_API_BASE_URL) {
@@ -9,10 +10,16 @@ export const resolveApiBaseUrl = () => {
 
   if (typeof window !== "undefined") {
     const { protocol, hostname } = window.location;
+    const isLocalHost = hostname === "localhost" || hostname === "127.0.0.1";
+
+    if (process.env.NODE_ENV === "production" && !isLocalHost) {
+      return productionApiBase;
+    }
+
     return `${protocol}//${hostname}:5000/api`;
   }
 
-  return "http://localhost:5000/api";
+  return process.env.NODE_ENV === "production" ? productionApiBase : "http://localhost:5000/api";
 };
 
 export const resolveApiOrigin = () => resolveApiBaseUrl().replace(/\/api\/?$/, "");
