@@ -269,6 +269,12 @@ export default function ExamPage() {
             <p className="stu-muted">Section: {currentQuestion.sectionName}</p>
             <h2 className="stu-q-title">Q{currentIndex + 1}. {currentQuestion.questionText}</h2>
 
+            {currentQuestion.imageUrl && (
+              <div className="stu-q-image">
+                <img src={currentQuestion.imageUrl} alt="Question diagram" />
+              </div>
+            )}
+
             <div className="stu-options">
               {currentQuestion.options.map((option, index) => (
                 <label className="stu-option" key={index}>

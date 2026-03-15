@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { apiRequest } from "../../../../lib/api";
+import { io } from "socket.io-client";
+import { apiRequest, resolveApiOrigin } from "../../../../lib/api";
 import { saveAuth } from "../../../../lib/auth";
 
 const formatDateTime = (value) => new Date(value).toLocaleString();
@@ -31,6 +32,7 @@ export default function StartExamPage() {
   const [starting, setStarting] = useState(false);
   const [joinedToken, setJoinedToken] = useState("");
   const [joined, setJoined] = useState(false);
+  const [examStartSignal, setExamStartSignal] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
 
   const scheduleTimestamp = useMemo(() => {
@@ -77,7 +79,7 @@ export default function StartExamPage() {
       return;
     }
 
-    if (scheduleTimestamp && Date.now() < scheduleTimestamp) {
+    if (!examStartSignal && scheduleTimestamp && Date.now() < scheduleTimestamp) {
       return;
     }
 
@@ -98,7 +100,39 @@ export default function StartExamPage() {
     };
 
     startAttempt();
-  }, [joined, joinedToken, params.examId, router, scheduleTimestamp]);
+  }, [joined, joinedToken, params.examId, router, scheduleTimestamp, examStartSignal]);
+
+  useEffect(() => {
+    if (!joined || !params.examId) {
+      return;
+    }
+
+    const shouldWaitForStart = scheduleTimestamp && Date.now() < scheduleTimestamp;
+    if (!shouldWaitForStart) {
+      return;
+    }
+
+    const socket = io(resolveApiOrigin(), {
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("connect", () => {
+      socket.emit("join-exam-room", { examId: params.examId });
+    });
+
+    socket.on("exam-started", (payload) => {
+      if (!payload?.examId || String(payload.examId) !== String(params.examId)) {
+        return;
+      }
+      setExamStartSignal(true);
+      setRemainingSeconds(0);
+      setMessage("Exam has started. Opening questions...");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [joined, params.examId, scheduleTimestamp]);
 
   const sendOtp = async () => {
     if (!form.email) {
@@ -179,6 +213,7 @@ export default function StartExamPage() {
       saveAuth(payload);
       setJoinedToken(payload.token);
       setJoined(true);
+      setExamStartSignal(false);
 
       if (!payload.exam?.scheduledAt || Date.now() >= new Date(payload.exam.scheduledAt).getTime()) {
         setMessage("Exam has started. Opening questions...");

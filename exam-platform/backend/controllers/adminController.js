@@ -2,6 +2,18 @@ const Attempt = require("../models/Attempt");
 const Exam = require("../models/Exam");
 const Question = require("../models/Question");
 const Section = require("../models/Section");
+const cloudinary = require("../lib/cloudinary");
+const {
+  scheduleExamStartBroadcast,
+  cancelExamStartBroadcast,
+} = require("../services/examStartRealtimeService");
+
+const destroyCloudinaryImage = async (publicId) => {
+  if (!publicId) return;
+  try {
+    await cloudinary.uploader.destroy(publicId);
+  } catch (_) {}
+};
 
 const buildExamPayload = async (exam) => {
   const sections = await Section.find({ examId: exam._id }).sort({ order: 1, createdAt: 1 }).lean();
@@ -169,10 +181,33 @@ const deleteSection = async (req, res) => {
   }
 };
 
+const uploadQuestionImage = async (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ message: "No file provided" });
+    }
+
+    const result = await new Promise((resolve, reject) => {
+      const stream = cloudinary.uploader.upload_stream(
+        { folder: "exam-questions", resource_type: "image" },
+        (error, uploadResult) => {
+          if (error) reject(error);
+          else resolve(uploadResult);
+        }
+      );
+      stream.end(req.file.buffer);
+    });
+
+    return res.json({ imageUrl: result.secure_url, imagePublicId: result.public_id });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to upload image" });
+  }
+};
+
 const addQuestion = async (req, res) => {
   try {
     const { sectionId } = req.params;
-    const { questionText, options, correctAnswer } = req.body;
+    const { questionText, options, correctAnswer, imageUrl, imagePublicId } = req.body;
 
     if (!questionText || !Array.isArray(options) || options.length !== 4) {
       return res.status(400).json({ message: "Question text and exactly 4 options are required" });
@@ -200,6 +235,8 @@ const addQuestion = async (req, res) => {
       questionText,
       options,
       correctAnswer,
+      imageUrl: imageUrl || "",
+      imagePublicId: imagePublicId || "",
       order: questionCount + 1,
     });
 
@@ -212,7 +249,7 @@ const addQuestion = async (req, res) => {
 const updateQuestion = async (req, res) => {
   try {
     const { questionId } = req.params;
-    const { questionText, options, correctAnswer } = req.body;
+    const { questionText, options, correctAnswer, imageUrl, imagePublicId } = req.body;
 
     if (!questionText || !Array.isArray(options) || options.length !== 4) {
       return res.status(400).json({ message: "Question text and exactly 4 options are required" });
@@ -232,9 +269,17 @@ const updateQuestion = async (req, res) => {
       return res.status(403).json({ message: "You cannot modify this question" });
     }
 
+    // If image changed or removed, destroy old Cloudinary asset
+    const newPublicId = imagePublicId || "";
+    if (question.imagePublicId && question.imagePublicId !== newPublicId) {
+      await destroyCloudinaryImage(question.imagePublicId);
+    }
+
     question.questionText = questionText;
     question.options = options;
     question.correctAnswer = Number(correctAnswer);
+    question.imageUrl = imageUrl || "";
+    question.imagePublicId = newPublicId;
     await question.save();
 
     return res.json(question);
@@ -257,6 +302,7 @@ const deleteQuestion = async (req, res) => {
       return res.status(403).json({ message: "You cannot delete this question" });
     }
 
+    await destroyCloudinaryImage(question.imagePublicId);
     await Question.deleteOne({ _id: questionId });
 
     return res.json({ message: "Question deleted" });
@@ -277,6 +323,15 @@ const deleteExam = async (req, res) => {
     const sections = await Section.find({ examId: exam._id });
     const sectionIds = sections.map((s) => s._id);
 
+    // Destroy Cloudinary images for all questions in this exam
+    const questionsWithImages = await Question.find(
+      { sectionId: { $in: sectionIds }, imagePublicId: { $exists: true, $ne: "" } },
+      { imagePublicId: 1 }
+    ).lean();
+    for (const q of questionsWithImages) {
+      await destroyCloudinaryImage(q.imagePublicId);
+    }
+
     await Question.deleteMany({ sectionId: { $in: sectionIds } });
     await Section.deleteMany({ examId: exam._id });
     await Exam.deleteOne({ _id: exam._id });
@@ -290,18 +345,70 @@ const deleteExam = async (req, res) => {
 const updateExam = async (req, res) => {
   try {
     const { examId } = req.params;
-    const { title } = req.body;
-
-    if (!title || !title.trim()) {
-      return res.status(400).json({ message: "Exam title is required" });
-    }
+    const { title, duration, scheduledAt, markingScheme } = req.body;
 
     const exam = await Exam.findOne({ _id: examId, createdBy: req.user._id });
     if (!exam) {
       return res.status(404).json({ message: "Exam not found" });
     }
 
-    exam.title = title.trim();
+    let hasUpdate = false;
+
+    if (title !== undefined) {
+      if (!String(title).trim()) {
+        return res.status(400).json({ message: "Exam title is required" });
+      }
+      exam.title = String(title).trim();
+      hasUpdate = true;
+    }
+
+    if (duration !== undefined) {
+      const parsedDuration = Number(duration);
+      if (!Number.isFinite(parsedDuration) || parsedDuration < 1) {
+        return res.status(400).json({ message: "Duration must be a positive number" });
+      }
+      exam.duration = parsedDuration;
+      hasUpdate = true;
+    }
+
+    if (scheduledAt !== undefined) {
+      const parsedSchedule = new Date(scheduledAt);
+      if (Number.isNaN(parsedSchedule.getTime())) {
+        return res.status(400).json({ message: "Invalid scheduled date-time" });
+      }
+      exam.scheduledAt = parsedSchedule;
+      hasUpdate = true;
+
+      cancelExamStartBroadcast(exam._id);
+      if (exam.published) {
+        scheduleExamStartBroadcast(exam._id, parsedSchedule);
+      }
+    }
+
+    if (markingScheme && typeof markingScheme === "object") {
+      if (markingScheme.correct !== undefined) {
+        const parsedCorrect = Number(markingScheme.correct);
+        if (!Number.isFinite(parsedCorrect)) {
+          return res.status(400).json({ message: "Marks for correct answer must be a number" });
+        }
+        exam.markingScheme.correct = parsedCorrect;
+        hasUpdate = true;
+      }
+
+      if (markingScheme.wrong !== undefined) {
+        const parsedWrong = Number(markingScheme.wrong);
+        if (!Number.isFinite(parsedWrong)) {
+          return res.status(400).json({ message: "Marks for wrong answer must be a number" });
+        }
+        exam.markingScheme.wrong = parsedWrong;
+        hasUpdate = true;
+      }
+    }
+
+    if (!hasUpdate) {
+      return res.status(400).json({ message: "No exam settings provided to update" });
+    }
+
     await exam.save();
 
     return res.json(exam);
@@ -435,6 +542,7 @@ module.exports = {
   addQuestion,
   updateQuestion,
   deleteQuestion,
+  uploadQuestionImage,
   getExamAttempts,
   getExamResults,
 };

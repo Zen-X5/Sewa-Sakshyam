@@ -2,13 +2,15 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import { apiRequest } from "../../../lib/api";
+import { apiRequest, resolveApiBaseUrl } from "../../../lib/api";
 import { clearAuth, getAuth } from "../../../lib/auth";
 
 const defaultQuestionDraft = {
   questionText: "",
   options: ["", "", "", ""],
   correctAnswer: 0,
+  imageUrl: "",
+  imagePublicId: "",
 };
 
 const toDateTimeLocal = (value) => {
@@ -42,8 +44,10 @@ export default function AdminDashboardPage() {
   const [sectionNames, setSectionNames] = useState({});
   const [editingSectionNames, setEditingSectionNames] = useState({});
   const [editingExamNames, setEditingExamNames] = useState({});
+  const [editingExamSettings, setEditingExamSettings] = useState({});
   const [questionDrafts, setQuestionDrafts] = useState({});
   const [editingQuestionBySection, setEditingQuestionBySection] = useState({});
+  const [uploadingImage, setUploadingImage] = useState({});
   const [previewQuestion, setPreviewQuestion] = useState(null);
   const [previewExamId, setPreviewExamId] = useState(null);
   const [expandedExams, setExpandedExams] = useState({});
@@ -213,9 +217,34 @@ export default function AdminDashboardPage() {
         questionText: question.questionText,
         options: [...question.options],
         correctAnswer: question.correctAnswer,
+        imageUrl: question.imageUrl || "",
+        imagePublicId: question.imagePublicId || "",
       },
     }));
     setEditingQuestionBySection((prev) => ({ ...prev, [sectionId]: question._id }));
+  };
+
+  const handleImageUpload = async (sectionId, file) => {
+    if (!file) return;
+    setUploadingImage((prev) => ({ ...prev, [sectionId]: true }));
+    setError("");
+    try {
+      const formData = new FormData();
+      formData.append("image", file);
+      const apiBase = resolveApiBaseUrl();
+      const response = await fetch(`${apiBase}/admin/upload-image`, {
+        method: "POST",
+        headers: { Authorization: `Bearer ${token}` },
+        body: formData,
+      });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok) throw new Error(data.message || "Upload failed");
+      updateQuestionDraft(sectionId, { imageUrl: data.imageUrl, imagePublicId: data.imagePublicId });
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setUploadingImage((prev) => ({ ...prev, [sectionId]: false }));
+    }
   };
 
   const saveQuestion = async (sectionId) => {
@@ -239,6 +268,8 @@ export default function AdminDashboardPage() {
             questionText: draft.questionText,
             options: draft.options,
             correctAnswer: Number(draft.correctAnswer),
+            imageUrl: draft.imageUrl || "",
+            imagePublicId: draft.imagePublicId || "",
           },
         });
         setMessage("Question updated");
@@ -250,6 +281,8 @@ export default function AdminDashboardPage() {
             questionText: draft.questionText,
             options: draft.options,
             correctAnswer: Number(draft.correctAnswer),
+            imageUrl: draft.imageUrl || "",
+            imagePublicId: draft.imagePublicId || "",
           },
         });
         setMessage("Question added");
@@ -347,6 +380,92 @@ export default function AdminDashboardPage() {
       await apiRequest(`/admin/exams/${examId}`, { method: "PATCH", token, body: { title: name } });
       setMessage("Exam renamed");
       cancelEditExamName(examId);
+      await loadExams(token);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const startEditExamSettings = (exam) => {
+    setEditingExamSettings((prev) => ({
+      ...prev,
+      [exam._id]: {
+        title: exam.title || "",
+        duration: exam.duration,
+        scheduledAt: toDateTimeLocal(exam.scheduledAt),
+        correct: exam.markingScheme?.correct ?? 4,
+        wrong: exam.markingScheme?.wrong ?? -1,
+      },
+    }));
+    setExpandedExams((prev) => ({ ...prev, [exam._id]: true }));
+  };
+
+  const cancelEditExamSettings = (examId) => {
+    setEditingExamSettings((prev) => {
+      const next = { ...prev };
+      delete next[examId];
+      return next;
+    });
+  };
+
+  const updateExamSettingsDraft = (examId, patch) => {
+    setEditingExamSettings((prev) => ({
+      ...prev,
+      [examId]: {
+        ...(prev[examId] || {}),
+        ...patch,
+      },
+    }));
+  };
+
+  const saveExamSettings = async (examId) => {
+    const draft = editingExamSettings[examId];
+    if (!draft) {
+      return;
+    }
+
+    const title = String(draft.title || "").trim();
+    const duration = Number(draft.duration);
+    const correct = Number(draft.correct);
+    const wrong = Number(draft.wrong);
+    const parsedSchedule = new Date(draft.scheduledAt);
+
+    if (!title) {
+      setError("Exam title is required");
+      return;
+    }
+    if (!Number.isFinite(duration) || duration < 1) {
+      setError("Duration must be at least 1 minute");
+      return;
+    }
+    if (!Number.isFinite(correct) || !Number.isFinite(wrong)) {
+      setError("Positive and negative marks must be valid numbers");
+      return;
+    }
+    if (Number.isNaN(parsedSchedule.getTime())) {
+      setError("Invalid scheduled date-time");
+      return;
+    }
+
+    setError("");
+    setMessage("");
+    try {
+      await apiRequest(`/admin/exams/${examId}`, {
+        method: "PATCH",
+        token,
+        body: {
+          title,
+          duration,
+          scheduledAt: parsedSchedule.toISOString(),
+          markingScheme: {
+            correct,
+            wrong,
+            unattempted: 0,
+          },
+        },
+      });
+      setMessage("Exam settings updated");
+      cancelEditExamSettings(examId);
       await loadExams(token);
     } catch (err) {
       setError(err.message);
@@ -477,6 +596,11 @@ export default function AdminDashboardPage() {
                     {editingExamNames[exam._id] === undefined && (
                       <button className="adm-btn adm-btn-outline" onClick={() => startEditExamName(exam)} type="button">Rename</button>
                     )}
+                    <button className="adm-btn adm-btn-outline"
+                      onClick={() => editingExamSettings[exam._id] ? cancelEditExamSettings(exam._id) : startEditExamSettings(exam)}
+                      type="button">
+                      {editingExamSettings[exam._id] ? "Close Settings" : "Edit Settings"}
+                    </button>
                     <button className="adm-btn adm-btn-danger" onClick={() => deleteExam(exam)} type="button">Delete</button>
                     <button className="adm-btn adm-btn-outline adm-expand-btn"
                       onClick={() => toggleExamExpanded(exam._id)} type="button">
@@ -488,6 +612,62 @@ export default function AdminDashboardPage() {
                 {/* Expanded content */}
                 {isExpanded && (
                   <div className="adm-exam-body">
+
+                    {editingExamSettings[exam._id] && (
+                      <div className="adm-exam-settings">
+                        <div className="adm-form-grid">
+                          <div className="adm-field">
+                            <label className="adm-label">Exam Title</label>
+                            <input
+                              className="input"
+                              value={editingExamSettings[exam._id].title}
+                              onChange={(e) => updateExamSettingsDraft(exam._id, { title: e.target.value })}
+                            />
+                          </div>
+                          <div className="adm-field">
+                            <label className="adm-label">Scheduled Date &amp; Time</label>
+                            <input
+                              className="input"
+                              type="datetime-local"
+                              value={editingExamSettings[exam._id].scheduledAt}
+                              onChange={(e) => updateExamSettingsDraft(exam._id, { scheduledAt: e.target.value })}
+                            />
+                          </div>
+                          <div className="adm-field">
+                            <label className="adm-label">Duration (minutes)</label>
+                            <input
+                              className="input"
+                              type="number"
+                              min="1"
+                              value={editingExamSettings[exam._id].duration}
+                              onChange={(e) => updateExamSettingsDraft(exam._id, { duration: e.target.value })}
+                            />
+                          </div>
+                          <div className="adm-field">
+                            <label className="adm-label">Marks for Correct</label>
+                            <input
+                              className="input"
+                              type="number"
+                              value={editingExamSettings[exam._id].correct}
+                              onChange={(e) => updateExamSettingsDraft(exam._id, { correct: e.target.value })}
+                            />
+                          </div>
+                          <div className="adm-field">
+                            <label className="adm-label">Marks for Wrong</label>
+                            <input
+                              className="input"
+                              type="number"
+                              value={editingExamSettings[exam._id].wrong}
+                              onChange={(e) => updateExamSettingsDraft(exam._id, { wrong: e.target.value })}
+                            />
+                          </div>
+                        </div>
+                        <div className="row" style={{ gap: 8 }}>
+                          <button className="adm-btn adm-btn-primary" onClick={() => saveExamSettings(exam._id)} type="button">Save Settings</button>
+                          <button className="adm-btn adm-btn-outline" onClick={() => cancelEditExamSettings(exam._id)} type="button">Cancel</button>
+                        </div>
+                      </div>
+                    )}
 
                     {/* Add section row */}
                     <div className="adm-add-section-row">
@@ -538,6 +718,33 @@ export default function AdminDashboardPage() {
                               <textarea className="textarea" placeholder="Enter question text..."
                                 value={draft.questionText}
                                 onChange={(e) => updateQuestionDraft(section._id, { questionText: e.target.value })} />
+                            </div>
+
+                            {/* Image upload */}
+                            <div className="adm-field">
+                              <label className="adm-label">Question Image <span style={{ textTransform: "none", fontWeight: 400, color: "#9ca3af" }}>(optional — shown between question and options)</span></label>
+                              {draft.imageUrl && (
+                                <div className="adm-q-image-preview">
+                                  <img src={draft.imageUrl} alt="Question diagram" />
+                                  <button
+                                    className="adm-btn adm-btn-danger adm-btn-sm"
+                                    type="button"
+                                    onClick={() => updateQuestionDraft(section._id, { imageUrl: "", imagePublicId: "" })}>
+                                    Remove Image
+                                  </button>
+                                </div>
+                              )}
+                              <label className={`adm-btn adm-btn-outline adm-btn-sm adm-image-upload-btn${uploadingImage[section._id] ? " adm-btn-uploading" : ""}`}>
+                                {uploadingImage[section._id] ? "Uploading..." : draft.imageUrl ? "Change Image" : "Upload Image"}
+                                <input
+                                  type="file"
+                                  accept="image/*"
+                                  style={{ display: "none" }}
+                                  disabled={!!uploadingImage[section._id]}
+                                  onChange={(e) => handleImageUpload(section._id, e.target.files[0])}
+                                />
+                              </label>
+                              <span style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>JPG, PNG, GIF, WebP · max 5 MB</span>
                             </div>
                             <div className="adm-options-grid">
                               {draft.options.map((opt, idx) => (

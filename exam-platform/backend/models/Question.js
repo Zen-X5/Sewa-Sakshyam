@@ -33,6 +33,14 @@ const questionSchema = new mongoose.Schema(
       min: 0,
       max: 3,
     },
+    imageUrl: {
+      type: String,
+      default: "",
+    },
+    imagePublicId: {
+      type: String,
+      default: "",
+    },
     order: {
       type: Number,
       required: true,
@@ -43,3 +51,4 @@ const questionSchema = new mongoose.Schema(
 );
 
 module.exports = mongoose.model("Question", questionSchema);
+

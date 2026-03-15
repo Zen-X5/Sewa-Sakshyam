@@ -6,6 +6,7 @@ const Question = require("../models/Question");
 const Section = require("../models/Section");
 const User = require("../models/User");
 const { evaluateAttempt } = require("../services/scoringService");
+const { scheduleExamStartBroadcast } = require("../services/examStartRealtimeService");
 
 const otpVerifiedGraceMinutes = Number(process.env.OTP_VERIFIED_GRACE_MINUTES || 30);
 const normalizeEmail = (email) => String(email || "").trim().toLowerCase();
@@ -134,6 +135,10 @@ const joinExamWithVerifiedEmail = async (req, res) => {
 
     if (exam.scheduledAt && Date.now() > new Date(exam.scheduledAt).getTime()) {
       return res.status(403).json({ message: "This exam has already started. Registration is now closed." });
+    }
+
+    if (exam.scheduledAt) {
+      scheduleExamStartBroadcast(exam._id, exam.scheduledAt);
     }
 
     const otpRecord = await EmailOtp.findOne({ email: normalizedEmail });
@@ -272,6 +277,7 @@ const getAttemptState = async (req, res) => {
         sectionId: question.sectionId,
         sectionName: sectionMap.get(String(question.sectionId)) || "Section",
         questionText: question.questionText,
+        imageUrl: question.imageUrl || "",
         options: question.options,
         order: question.order,
       })),

@@ -1003,6 +1003,15 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
   gap: 16px;
 }
 
+.adm-exam-settings {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 14px;
+  display: grid;
+  gap: 12px;
+}
+
 .adm-add-section-row {
   display: flex;
   gap: 10px;
@@ -1090,6 +1099,38 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
   letter-spacing: 0.6px;
   color: var(--muted);
   margin-bottom: 8px;
+}
+
+/* Question image (admin preview) */
+.adm-q-image-preview {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 8px;
+  flex-wrap: wrap;
+}
+
+.adm-q-image-preview img {
+  max-width: 100%;
+  max-height: 200px;
+  border-radius: 6px;
+  border: 1px solid #e5e7eb;
+  object-fit: contain;
+  background: #f9fafb;
+}
+
+.adm-image-upload-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  width: fit-content;
+}
+
+.adm-btn-uploading {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
 }
 
 /* Empty state */
@@ -1522,6 +1563,24 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
   font-weight: 700;
   color: #111827;
   margin: 8px 0 14px;
+}
+
+/* Question image displayed in exam */
+.stu-q-image {
+  margin: 0 0 16px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+  background: #f8fafc;
+  text-align: center;
+}
+
+.stu-q-image img {
+  max-width: 100%;
+  max-height: 340px;
+  object-fit: contain;
+  display: block;
+  margin: 0 auto;
 }
 
 .stu-options {
