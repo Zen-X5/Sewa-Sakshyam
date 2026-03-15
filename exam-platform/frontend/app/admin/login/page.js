@@ -34,36 +34,60 @@ export default function AdminLoginPage() {
   };
 
   return (
-    <main className="auth-wrapper">
-      <form className="card auth-card stack" onSubmit={handleSubmit}>
-        <h1 className="title">Admin Login</h1>
+    <main className="gov-login-wrapper">
+      <div className="gov-login-box">
 
-        <input
-          className="input"
-          type="email"
-          placeholder="Admin email"
-          value={form.email}
-          onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
-          required
-        />
+        {/* Header strip */}
+        <div className="gov-login-header">
+          <span className="gov-login-brand">Sewa Sakshyam</span>
+          <span className="gov-login-badge">ADMIN</span>
+        </div>
 
-        <input
-          className="input"
-          type="password"
-          placeholder="Password"
-          value={form.password}
-          onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
-          required
-        />
+        {/* Form body */}
+        <div className="gov-login-body">
+          <h1 className="gov-login-title">Administrator Login</h1>
+          <p className="gov-login-sub">Restricted access. Authorised personnel only.</p>
 
-        <button className="button" disabled={loading} type="submit">
-          {loading ? "Logging in..." : "Login"}
-        </button>
+          <form className="stack" onSubmit={handleSubmit}>
+            <div className="gov-field">
+              <label className="gov-label" htmlFor="admin-email">Official Email</label>
+              <input
+                className="input"
+                id="admin-email"
+                type="email"
+                placeholder="admin@example.com"
+                value={form.email}
+                onChange={(event) => setForm((prev) => ({ ...prev, email: event.target.value }))}
+                required
+              />
+            </div>
 
-        {error ? <p className="error">{error}</p> : null}
+            <div className="gov-field">
+              <label className="gov-label" htmlFor="admin-password">Password</label>
+              <input
+                className="input"
+                id="admin-password"
+                type="password"
+                placeholder="Enter password"
+                value={form.password}
+                onChange={(event) => setForm((prev) => ({ ...prev, password: event.target.value }))}
+                required
+              />
+            </div>
 
-        <Link href="/">Back to home</Link>
-      </form>
+            {error ? <p className="error" style={{ margin: 0 }}>{error}</p> : null}
+
+            <button className="button gov-login-btn" disabled={loading} type="submit">
+              {loading ? "Verifying..." : "Login"}
+            </button>
+          </form>
+        </div>
+
+        {/* Footer */}
+        <div className="gov-login-footer">
+          <Link href="/">← Back to Home</Link>
+        </div>
+      </div>
     </main>
   );
 }

@@ -244,3 +244,889 @@ a {
     grid-template-columns: 1fr;
   }
 }
+
+/* ─── LANDING PAGE ─────────────────────────────────────── */
+
+/* Nav */
+.landing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #1e3a8a;
+  border-bottom: 1px solid var(--border);
+}
+
+.landing-nav-inner {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 14px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.landing-brand {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -0.5px;
+}
+
+.landing-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-size: 14px;
+  font-weight: 500;
+  color: #fff;
+}
+
+.landing-nav-links a {
+  color: rgba(255,255,255,0.8);
+  transition: color 0.15s;
+}
+
+.landing-nav-links a:hover {
+  color: #fff;
+}
+
+.landing-nav-cta {
+  padding: 8px 16px;
+  font-size: 13px;
+}
+
+/* Footer */
+.landing-footer {
+  background: #111827;
+  color: rgba(255, 255, 255, 0.5);
+  text-align: center;
+  padding: 28px 24px;
+  font-size: 13px;
+}
+
+@media (max-width: 640px) {
+  .landing-nav-links a:not(.button) {
+    display: none;
+  }
+}
+
+/* ─── HOME PAGE (GOVT STYLE) ───────────────────────────── */
+
+.home-shell {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  background: #f0f2f5;
+}
+
+/* Header */
+.home-header {
+  background: #1e3a8a;
+  border-bottom: 4px solid #c8901a;
+  padding: 0 24px;
+}
+
+.home-header-inner {
+  max-width: 1100px;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 0;
+  gap: 16px;
+}
+
+.home-header-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.home-logo-box {
+  width: 52px;
+  height: 52px;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.12);
+  border: 1px solid rgba(255,255,255,0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  font-weight: 900;
+  color: #fff;
+  letter-spacing: -1px;
+  flex-shrink: 0;
+}
+
+.home-site-name {
+  font-size: 20px;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.home-site-tag {
+  font-size: 11px;
+  color: rgba(255,255,255,0.6);
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+}
+
+.home-header-nav { display: flex; gap: 12px; }
+
+.home-nav-link {
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.8);
+  padding: 6px 14px;
+  border: 1px solid rgba(255,255,255,0.25);
+  border-radius: 4px;
+}
+
+.home-nav-link:hover { color: #fff; background: rgba(255,255,255,0.08); }
+
+/* Notice bar */
+.home-notice {
+  background: #fef9c3;
+  border-bottom: 1px solid #fde047;
+  color: #713f12;
+  font-size: 12px;
+  font-weight: 500;
+  text-align: center;
+  padding: 8px 20px;
+}
+
+/* Main */
+.home-main {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 32px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  flex: 1;
+}
+
+/* Welcome panel */
+.home-welcome-panel {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-left: 5px solid #1e3a8a;
+  border-radius: 4px;
+  padding: 24px 28px;
+}
+
+.home-welcome-title {
+  font-size: 20px;
+  font-weight: 800;
+  color: #111827;
+  margin: 0 0 10px;
+}
+
+.home-welcome-desc {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.75;
+  margin: 0;
+}
+
+/* Portal cards */
+.home-portals {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 20px;
+}
+
+.home-portal-card {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.home-portal-header {
+  padding: 10px 18px;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #fff;
+}
+
+.home-portal-header-student { background: #1e3a8a; }
+.home-portal-header-admin   { background: #374151; }
+
+.home-portal-body {
+  padding: 20px 18px;
+}
+
+.home-portal-body p {
+  font-size: 14px;
+  color: #4b5563;
+  line-height: 1.7;
+  margin: 0 0 18px;
+}
+
+.home-portal-btn {
+  display: inline-block;
+  padding: 9px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 4px;
+  border: none;
+  cursor: pointer;
+}
+
+.home-portal-btn-primary {
+  background: #1e3a8a;
+  color: #fff;
+}
+
+.home-portal-btn-primary:hover { background: #1e40af; }
+
+.home-portal-btn-outline {
+  background: transparent;
+  border: 1px solid #374151;
+  color: #374151;
+}
+
+.home-portal-btn-outline:hover { background: #f3f4f6; }
+
+/* Info table */
+.home-info-section {
+  background: #fff;
+  border: 1px solid #d1d5db;
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.home-info-heading {
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.7px;
+  color: #374151;
+  padding: 12px 18px;
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  margin: 0;
+}
+
+.home-info-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.home-info-table tr:nth-child(even) { background: #f9fafb; }
+
+.home-info-table td {
+  padding: 10px 18px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #4b5563;
+  vertical-align: top;
+}
+
+.home-info-table td:first-child {
+  font-weight: 600;
+  color: #111827;
+  width: 220px;
+  white-space: nowrap;
+}
+
+/* Footer */
+.home-footer {
+  background: #1f2937;
+  color: rgba(255,255,255,0.45);
+  text-align: center;
+  font-size: 12px;
+  padding: 20px 24px;
+}
+
+/* ─── ADMIN LOGIN (GOVT STYLE) ──────────────────────────── */
+
+.gov-login-wrapper {
+  min-height: 100vh;
+  background: #f0f2f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.gov-login-box {
+  width: 100%;
+  max-width: 420px;
+  background: #fff;
+  border: 1px solid #c9cdd4;
+  border-radius: 4px;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+}
+
+.gov-login-header {
+  background: #1e3a8a;
+  padding: 18px 24px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.gov-login-brand {
+  color: #fff;
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+}
+
+.gov-login-badge {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 2px;
+  padding: 3px 9px;
+  border-radius: 2px;
+}
+
+.gov-login-body {
+  padding: 28px 28px 24px;
+}
+
+.gov-login-title {
+  font-size: 20px;
+  font-weight: 700;
+  margin: 0 0 4px;
+  color: #1f2937;
+}
+
+.gov-login-sub {
+  font-size: 12px;
+  color: #6b7280;
+  margin: 0 0 24px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+.gov-field {
+  display: grid;
+  gap: 5px;
+}
+
+.gov-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.gov-login-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  border-radius: 4px;
+  background: #1e3a8a;
+  margin-top: 4px;
+}
+
+.gov-login-btn:hover:not(:disabled) {
+  background: #1e40af;
+}
+
+.gov-login-footer {
+  border-top: 1px solid #e5e7eb;
+  padding: 14px 28px;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ─── ADMIN SHELL (Dashboard + Results) ────────────────────── */
+
+.adm-shell {
+  min-height: 100vh;
+  background: #f0f2f5;
+  display: flex;
+  flex-direction: column;
+}
+
+.adm-loading {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--muted);
+  font-size: 15px;
+}
+
+/* Nav */
+.adm-nav {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: #1e3a8a;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 28px;
+  height: 54px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
+}
+
+.adm-nav-brand {
+  font-size: 16px;
+  font-weight: 800;
+  letter-spacing: 0.2px;
+}
+
+.adm-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.adm-nav-role {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: rgba(255,255,255,0.55);
+}
+
+/* Main content */
+.adm-main {
+  max-width: 1100px;
+  width: 100%;
+  margin: 0 auto;
+  padding: 28px 24px 60px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Page title */
+.adm-page-title {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.adm-page-title h1 {
+  font-size: 22px;
+  font-weight: 800;
+  margin: 0 0 4px;
+  color: #111827;
+}
+
+.adm-page-title p {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* Section heading */
+.adm-section-heading {
+  font-size: 14px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: var(--muted);
+  margin: 0 0 14px;
+}
+
+/* Alerts */
+.adm-alert {
+  padding: 12px 16px;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.adm-alert-error   { background: #fef2f2; color: #b91c1c; border: 1px solid #fecaca; }
+.adm-alert-success { background: #f0fdf4; color: #15803d; border: 1px solid #bbf7d0; }
+
+/* Cards */
+.adm-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.adm-card-header {
+  background: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+  padding: 12px 20px;
+  font-size: 13px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #374151;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.adm-card-header-note {
+  font-size: 11px;
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.adm-card-body {
+  padding: 20px;
+}
+
+/* Form helpers */
+.adm-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 14px;
+}
+
+.adm-field {
+  display: grid;
+  gap: 5px;
+}
+
+.adm-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6b7280;
+}
+
+/* Buttons */
+.adm-btn {
+  border: none;
+  border-radius: 7px;
+  padding: 8px 14px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  white-space: nowrap;
+}
+
+.adm-btn:disabled { opacity: 0.55; cursor: not-allowed; }
+
+.adm-btn-primary { background: #1e40af; color: #fff; }
+.adm-btn-primary:hover:not(:disabled) { background: #1d4ed8; }
+
+.adm-btn-outline {
+  background: transparent;
+  border: 1px solid #d1d5db;
+  color: #374151;
+}
+.adm-btn-outline:hover:not(:disabled) { background: #f3f4f6; }
+
+.adm-btn-ghost { background: rgba(255,255,255,0.1); color: #fff; }
+.adm-btn-ghost:hover:not(:disabled) { background: rgba(255,255,255,0.18); }
+
+.adm-btn-warn { background: #b45309; color: #fff; }
+.adm-btn-warn:hover:not(:disabled) { background: #92400e; }
+
+.adm-btn-danger { background: #b91c1c; color: #fff; }
+.adm-btn-danger:hover:not(:disabled) { background: #991b1b; }
+
+.adm-btn-sm { padding: 5px 10px; font-size: 12px; }
+
+/* Exam card */
+.adm-exam-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 10px;
+  margin-bottom: 14px;
+  overflow: hidden;
+  box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+}
+
+.adm-exam-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 18px 20px;
+  flex-wrap: wrap;
+}
+
+.adm-exam-meta { flex: 1; min-width: 0; }
+
+.adm-exam-title-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+}
+
+.adm-exam-title {
+  font-size: 16px;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+}
+
+.adm-exam-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.adm-chip {
+  background: #f3f4f6;
+  border: 1px solid #e5e7eb;
+  border-radius: 20px;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: #4b5563;
+}
+
+.adm-badge {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 3px 9px;
+  border-radius: 20px;
+}
+
+.adm-badge-published { background: #dcfce7; color: #15803d; }
+.adm-badge-draft     { background: #fef9c3; color: #92400e; }
+
+.adm-exam-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  align-items: flex-start;
+}
+
+.adm-expand-btn {
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.25);
+  color: #374151;
+  border-color: #d1d5db;
+}
+
+.adm-expand-btn:hover { background: #f3f4f6; }
+
+/* Exam body (expanded) */
+.adm-exam-body {
+  border-top: 1px solid #e5e7eb;
+  background: #f9fafb;
+  padding: 18px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.adm-add-section-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.adm-add-section-row .input { flex: 1; min-width: 180px; }
+
+/* Section card */
+.adm-section-card {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.adm-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 16px;
+  background: #f3f4f6;
+  border-bottom: 1px solid #e5e7eb;
+  flex-wrap: wrap;
+}
+
+.adm-section-title {
+  font-size: 14px;
+  font-weight: 700;
+  margin: 0;
+  color: #111827;
+}
+
+.adm-section-count {
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--muted);
+  margin-left: 6px;
+}
+
+/* Question editor */
+.adm-q-editor {
+  padding: 14px 16px;
+  display: grid;
+  gap: 12px;
+  border-bottom: 1px solid #f3f4f6;
+}
+
+.adm-options-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+/* Question list items */
+.adm-q-list { padding: 12px 16px; }
+
+.adm-q-item {
+  border: 1px solid #e5e7eb;
+  border-radius: 7px;
+  padding: 10px 12px;
+}
+
+.adm-q-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 3px;
+}
+
+.adm-q-correct {
+  font-size: 12px;
+  color: #15803d;
+  margin-bottom: 8px;
+}
+
+/* Preview */
+.adm-preview-wrap { padding: 12px 16px; }
+.adm-preview-label {
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin-bottom: 8px;
+}
+
+/* Empty state */
+.adm-empty {
+  color: var(--muted);
+  font-size: 14px;
+  text-align: center;
+  padding: 32px;
+}
+
+/* Summary chips (results page) */
+.adm-summary-chips {
+  display: flex;
+  gap: 0;
+  flex-wrap: wrap;
+}
+
+.adm-summary-item {
+  flex: 1;
+  min-width: 140px;
+  padding: 16px 20px;
+  border-right: 1px solid #e5e7eb;
+}
+
+.adm-summary-item:last-child { border-right: none; }
+
+.adm-summary-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: var(--muted);
+  margin-bottom: 6px;
+}
+
+.adm-summary-value {
+  font-size: 15px;
+  font-weight: 700;
+  color: #111827;
+}
+
+/* Results/Attempts table */
+.adm-table-wrap { overflow-x: auto; }
+
+.adm-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.adm-table th {
+  background: #f9fafb;
+  border-bottom: 2px solid #e5e7eb;
+  padding: 10px 12px;
+  text-align: left;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+  color: #6b7280;
+  white-space: nowrap;
+}
+
+.adm-table td {
+  padding: 10px 12px;
+  border-bottom: 1px solid #f3f4f6;
+  color: #374151;
+  vertical-align: middle;
+}
+
+.adm-table tbody tr:hover { background: #f9fafb; }
+.adm-table-rank1 td { background: #fffbeb; }
+
+.adm-rank {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  background: #f3f4f6;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+  color: #374151;
+}
+
+.adm-table-rank1 .adm-rank {
+  background: #fbbf24;
+  color: #78350f;
+}
+
+.adm-td-muted { color: var(--muted); font-size: 12px; }
+.adm-cell-correct { color: #15803d; font-weight: 600; }
+.adm-cell-wrong   { color: #b91c1c; font-weight: 600; }
+
+.adm-reason-badge {
+  background: #f3f4f6;
+  border-radius: 4px;
+  padding: 2px 7px;
+  font-size: 11px;
+  color: #4b5563;
+  text-transform: capitalize;
+}
+
+@media (max-width: 700px) {
+  .adm-nav { padding: 0 16px; }
+  .adm-main { padding: 16px 12px 40px; }
+  .adm-exam-header { flex-direction: column; }
+  .adm-summary-chips { flex-direction: column; }
+  .adm-summary-item { border-right: none; border-bottom: 1px solid #e5e7eb; }
+  .adm-options-grid { grid-template-columns: 1fr; }
+}

@@ -309,289 +309,268 @@ export default function AdminDashboardPage() {
 
   if (loading) {
     return (
-      <main className="container">
-        <p>Loading dashboard...</p>
-      </main>
+      <div className="adm-shell">
+        <div className="adm-loading">Loading dashboard...</div>
+      </div>
     );
   }
 
   return (
-    <main className="container">
-      <div className="card row space-between">
-        <div>
-          <h1 className="title">Admin Dashboard</h1>
-          <p className="muted">Manage exams, sections, questions, publish state, and attempt reports.</p>
+    <div className="adm-shell">
+
+      {/* ── TOP NAV ── */}
+      <header className="adm-nav">
+        <span className="adm-nav-brand">Sewa Sakshyam</span>
+        <div className="adm-nav-right">
+          <span className="adm-nav-role">Admin Panel</span>
+          <button className="adm-btn adm-btn-ghost" onClick={handleLogout} type="button">Logout</button>
         </div>
-        <button className="button secondary" onClick={handleLogout} type="button">
-          Logout
-        </button>
-      </div>
+      </header>
 
-      <form className="card stack" onSubmit={createExam}>
-        <h2 className="title">Create Exam</h2>
-        <input
-          className="input"
-          placeholder="Exam title"
-          value={examForm.title}
-          onChange={(event) => setExamForm((prev) => ({ ...prev, title: event.target.value }))}
-          required
-        />
+      <main className="adm-main">
 
-        <div className="grid grid-2">
-          <input
-            className="input"
-            type="datetime-local"
-            placeholder="Exam date and time"
-            value={examForm.scheduledAt}
-            onChange={(event) => setExamForm((prev) => ({ ...prev, scheduledAt: event.target.value }))}
-            required
-          />
-
-          <input
-            className="input"
-            type="number"
-            min="1"
-            placeholder="Duration in minutes"
-            value={examForm.duration}
-            onChange={(event) => setExamForm((prev) => ({ ...prev, duration: event.target.value }))}
-            required
-          />
-
-          <input
-            className="input"
-            type="number"
-            placeholder="Correct mark"
-            value={examForm.correct}
-            onChange={(event) => setExamForm((prev) => ({ ...prev, correct: event.target.value }))}
-            required
-          />
+        {/* ── PAGE TITLE ── */}
+        <div className="adm-page-title">
+          <div>
+            <h1>Dashboard</h1>
+            <p>Manage exams, sections, questions and results.</p>
+          </div>
         </div>
 
-        <input
-          className="input"
-          type="number"
-          placeholder="Wrong mark"
-          value={examForm.wrong}
-          onChange={(event) => setExamForm((prev) => ({ ...prev, wrong: event.target.value }))}
-          required
-        />
+        {error  ? <div className="adm-alert adm-alert-error">{error}</div>   : null}
+        {message ? <div className="adm-alert adm-alert-success">{message}</div> : null}
 
-        <button className="button" type="submit">
-          Save Exam
-        </button>
-      </form>
-
-      {error ? <p className="error">{error}</p> : null}
-      {message ? <p className="success-text">{message}</p> : null}
-
-      <section className="grid">
-        {exams.map((exam) => (
-          <article className="card" key={exam._id}>
-            {(() => {
-              const isExpanded = Boolean(expandedExams[exam._id]);
-              return (
-                <>
-            <div className="row space-between">
-              <div>
-                <h3 className="title">{exam.title}</h3>
-                <p className="muted">
-                  Duration: {exam.duration} min | Marking: +{exam.markingScheme.correct} / {exam.markingScheme.wrong}
-                </p>
-                <p className="muted">Scheduled: {exam.scheduledAt ? new Date(exam.scheduledAt).toLocaleString() : "-"}</p>
+        {/* ── CREATE EXAM FORM ── */}
+        <section className="adm-card">
+          <div className="adm-card-header">Create New Exam</div>
+          <form className="adm-card-body stack" onSubmit={createExam}>
+            <div className="adm-field">
+              <label className="adm-label">Exam Title</label>
+              <input className="input" placeholder="e.g. JEE Mock Test 1" value={examForm.title}
+                onChange={(e) => setExamForm((p) => ({ ...p, title: e.target.value }))} required />
+            </div>
+            <div className="adm-form-grid">
+              <div className="adm-field">
+                <label className="adm-label">Scheduled Date &amp; Time</label>
+                <input className="input" type="datetime-local" value={examForm.scheduledAt}
+                  onChange={(e) => setExamForm((p) => ({ ...p, scheduledAt: e.target.value }))} required />
               </div>
-
-              <div className="row">
-                <button className="button" onClick={() => togglePublish(exam)} type="button">
-                  {exam.published ? "Unpublish" : "Publish"}
-                </button>
-                <button className="button outline" onClick={() => router.push(`/admin/results/${exam._id}`)} type="button">
-                  View Results & Attempts
-                </button>
-                <button className="button outline" onClick={() => toggleExamExpanded(exam._id)} type="button">
-                  {isExpanded ? "Show Less" : "Show More"}
-                </button>
+              <div className="adm-field">
+                <label className="adm-label">Duration (minutes)</label>
+                <input className="input" type="number" min="1" placeholder="180" value={examForm.duration}
+                  onChange={(e) => setExamForm((p) => ({ ...p, duration: e.target.value }))} required />
+              </div>
+              <div className="adm-field">
+                <label className="adm-label">Marks for Correct</label>
+                <input className="input" type="number" placeholder="4" value={examForm.correct}
+                  onChange={(e) => setExamForm((p) => ({ ...p, correct: e.target.value }))} required />
+              </div>
+              <div className="adm-field">
+                <label className="adm-label">Marks for Wrong</label>
+                <input className="input" type="number" placeholder="-1" value={examForm.wrong}
+                  onChange={(e) => setExamForm((p) => ({ ...p, wrong: e.target.value }))} required />
               </div>
             </div>
-
-            {isExpanded ? (
-              <>
-            <div className="row" style={{ marginBottom: 12 }}>
-              <input
-                className="input"
-                placeholder="New section name"
-                value={sectionNames[exam._id] || ""}
-                onChange={(event) =>
-                  setSectionNames((prev) => ({
-                    ...prev,
-                    [exam._id]: event.target.value,
-                  }))
-                }
-              />
-              <button className="button" onClick={() => addSection(exam._id)} type="button">
-                Add Section
-              </button>
+            <div>
+              <button className="adm-btn adm-btn-primary" type="submit">+ Create Exam</button>
             </div>
+          </form>
+        </section>
 
-            {exam.sections?.map((section) => {
-              const draft = questionDrafts[section._id] || defaultQuestionDraft;
-              const isEditing = Boolean(editingQuestionBySection[section._id]);
-              const sectionQuestions = sortQuestions(section.questions || []);
-              const isEditingSectionName = editingSectionNames[section._id] !== undefined;
+        {/* ── EXAM LIST ── */}
+        <section>
+          <h2 className="adm-section-heading">All Exams ({exams.length})</h2>
+          {exams.length === 0 && <p className="adm-empty">No exams created yet.</p>}
 
-              return (
-                <div className="card" key={section._id}>
-                  <div className="row space-between">
-                    <h4 className="title" style={{ marginBottom: 0 }}>
-                      {section.name} ({sectionQuestions.length} questions)
-                    </h4>
-                    <div className="row">
-                      <button className="button outline" onClick={() => startEditSectionName(section)} type="button">
-                        Edit Section
-                      </button>
-                      <button className="button danger" onClick={() => deleteSection(section._id)} type="button">
-                        Delete Section
-                      </button>
+          {exams.map((exam) => {
+            const isExpanded = Boolean(expandedExams[exam._id]);
+            const totalQ = exam.sections?.reduce((s, sec) => s + (sec.questions?.length || 0), 0) || 0;
+
+            return (
+              <div className="adm-exam-card" key={exam._id}>
+
+                {/* Exam header row */}
+                <div className="adm-exam-header">
+                  <div className="adm-exam-meta">
+                    <div className="adm-exam-title-row">
+                      <h3 className="adm-exam-title">{exam.title}</h3>
+                      <span className={`adm-badge ${exam.published ? "adm-badge-published" : "adm-badge-draft"}`}>
+                        {exam.published ? "Published" : "Draft"}
+                      </span>
+                    </div>
+                    <div className="adm-exam-chips">
+                      <span className="adm-chip">⏱ {exam.duration} min</span>
+                      <span className="adm-chip">+{exam.markingScheme.correct} / {exam.markingScheme.wrong}</span>
+                      <span className="adm-chip">📅 {exam.scheduledAt ? new Date(exam.scheduledAt).toLocaleString() : "—"}</span>
+                      <span className="adm-chip">{exam.sections?.length || 0} sections · {totalQ} questions</span>
                     </div>
                   </div>
-
-                  {isEditingSectionName ? (
-                    <div className="row" style={{ marginTop: 10 }}>
-                      <input
-                        className="input"
-                        placeholder="Section name"
-                        value={editingSectionNames[section._id]}
-                        onChange={(event) =>
-                          setEditingSectionNames((prev) => ({
-                            ...prev,
-                            [section._id]: event.target.value,
-                          }))
-                        }
-                      />
-                      <button className="button" onClick={() => saveSectionName(section._id)} type="button">
-                        Save Name
-                      </button>
-                      <button className="button outline" onClick={() => cancelEditSectionName(section._id)} type="button">
-                        Cancel
-                      </button>
-                    </div>
-                  ) : null}
-
-                  <div className="stack">
-                    <textarea
-                      className="textarea"
-                      placeholder="Question text"
-                      value={draft.questionText}
-                      onChange={(event) =>
-                        updateQuestionDraft(section._id, {
-                          questionText: event.target.value,
-                        })
-                      }
-                    />
-
-                    {draft.options.map((option, index) => (
-                      <input
-                        key={index}
-                        className="input"
-                        placeholder={`Option ${index + 1}`}
-                        value={option}
-                        onChange={(event) => {
-                          const nextOptions = [...draft.options];
-                          nextOptions[index] = event.target.value;
-                          updateQuestionDraft(section._id, { options: nextOptions });
-                        }}
-                      />
-                    ))}
-
-                    <select
-                      className="select"
-                      value={draft.correctAnswer}
-                      onChange={(event) =>
-                        updateQuestionDraft(section._id, {
-                          correctAnswer: Number(event.target.value),
-                        })
-                      }
-                    >
-                      <option value={0}>Correct Option: 1</option>
-                      <option value={1}>Correct Option: 2</option>
-                      <option value={2}>Correct Option: 3</option>
-                      <option value={3}>Correct Option: 4</option>
-                    </select>
-
-                    <div className="row">
-                      <button className="button" onClick={() => saveQuestion(section._id)} type="button">
-                        {isEditing ? "Update Question" : "Add Question"}
-                      </button>
-                      {isEditing ? (
-                        <button className="button outline" onClick={() => resetSectionDraft(section._id)} type="button">
-                          Cancel Edit
-                        </button>
-                      ) : null}
-                    </div>
+                  <div className="adm-exam-actions">
+                    <button className={`adm-btn ${exam.published ? "adm-btn-warn" : "adm-btn-primary"}`}
+                      onClick={() => togglePublish(exam)} type="button">
+                      {exam.published ? "Unpublish" : "Publish"}
+                    </button>
+                    <button className="adm-btn adm-btn-outline"
+                      onClick={() => router.push(`/admin/results/${exam._id}`)} type="button">
+                      Results &amp; Attempts
+                    </button>
+                    <button className="adm-btn adm-btn-ghost adm-expand-btn"
+                      onClick={() => toggleExamExpanded(exam._id)} type="button">
+                      {isExpanded ? "▲ Collapse" : "▼ Expand"}
+                    </button>
                   </div>
+                </div>
 
-                  <div style={{ marginTop: 12 }}>
-                    <h5 className="title">Added Questions</h5>
-                    <div className="question-list">
-                      {sectionQuestions.length === 0 ? (
-                        <p className="muted">No questions added yet.</p>
-                      ) : (
-                        sectionQuestions.map((question, index) => (
-                          <div className="question-item" key={question._id}>
-                            <p style={{ margin: 0, fontWeight: 600 }}>Q{index + 1}. {question.questionText}</p>
-                            <p className="muted" style={{ marginBottom: 0 }}>
-                              Correct: Option {question.correctAnswer + 1}
-                            </p>
-                            <div className="question-actions">
-                              <button
-                                className="button outline"
-                                onClick={() => {
-                                  setPreviewQuestion(question);
-                                  setPreviewExamId(exam._id);
-                                }}
-                                type="button"
-                              >
-                                Preview
-                              </button>
-                              <button className="button secondary" onClick={() => startEditQuestion(section._id, question)} type="button">
-                                Edit
-                              </button>
-                              <button className="button danger" onClick={() => deleteQuestion(question._id)} type="button">
-                                Delete
-                              </button>
+                {/* Expanded content */}
+                {isExpanded && (
+                  <div className="adm-exam-body">
+
+                    {/* Add section row */}
+                    <div className="adm-add-section-row">
+                      <input className="input" placeholder="New section name (e.g. Physics)"
+                        value={sectionNames[exam._id] || ""}
+                        onChange={(e) => setSectionNames((p) => ({ ...p, [exam._id]: e.target.value }))} />
+                      <button className="adm-btn adm-btn-primary" onClick={() => addSection(exam._id)} type="button">
+                        + Add Section
+                      </button>
+                    </div>
+
+                    {/* Sections */}
+                    {exam.sections?.map((section) => {
+                      const draft = questionDrafts[section._id] || defaultQuestionDraft;
+                      const isEditing = Boolean(editingQuestionBySection[section._id]);
+                      const sectionQuestions = sortQuestions(section.questions || []);
+                      const isEditingSectionName = editingSectionNames[section._id] !== undefined;
+
+                      return (
+                        <div className="adm-section-card" key={section._id}>
+                          {/* Section header */}
+                          <div className="adm-section-header">
+                            <div>
+                              {isEditingSectionName ? (
+                                <div className="row" style={{ gap: 8 }}>
+                                  <input className="input" style={{ maxWidth: 260 }}
+                                    value={editingSectionNames[section._id]}
+                                    onChange={(e) => setEditingSectionNames((p) => ({ ...p, [section._id]: e.target.value }))} />
+                                  <button className="adm-btn adm-btn-primary" onClick={() => saveSectionName(section._id)} type="button">Save</button>
+                                  <button className="adm-btn adm-btn-ghost" onClick={() => cancelEditSectionName(section._id)} type="button">Cancel</button>
+                                </div>
+                              ) : (
+                                <h4 className="adm-section-title">{section.name} <span className="adm-section-count">{sectionQuestions.length} questions</span></h4>
+                              )}
+                            </div>
+                            <div className="row" style={{ gap: 6 }}>
+                              {!isEditingSectionName && (
+                                <button className="adm-btn adm-btn-ghost" onClick={() => startEditSectionName(section)} type="button">Rename</button>
+                              )}
+                              <button className="adm-btn adm-btn-danger" onClick={() => deleteSection(section._id)} type="button">Delete</button>
                             </div>
                           </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
 
-            {previewQuestion && previewExamId === exam._id ? (
-              <div className="card">
-                <h4 className="title">Student Preview</h4>
-                <div className="preview-box">
-                  <p style={{ marginTop: 0, fontWeight: 600 }}>{previewQuestion.questionText}</p>
-                  {(previewQuestion.options || []).map((option, optionIndex) => (
-                    <label className="question-option" key={optionIndex}>
-                      <input disabled name={`preview-${previewQuestion._id}`} type="radio" /> {option}
-                    </label>
-                  ))}
-                  <p className="muted" style={{ marginBottom: 0 }}>
-                    Correct option: {previewQuestion.correctAnswer + 1}
-                  </p>
-                </div>
+                          {/* Question editor */}
+                          <div className="adm-q-editor">
+                            <div className="adm-field">
+                              <label className="adm-label">{isEditing ? "Edit Question" : "New Question"}</label>
+                              <textarea className="textarea" placeholder="Enter question text..."
+                                value={draft.questionText}
+                                onChange={(e) => updateQuestionDraft(section._id, { questionText: e.target.value })} />
+                            </div>
+                            <div className="adm-options-grid">
+                              {draft.options.map((opt, idx) => (
+                                <input key={idx} className="input" placeholder={`Option ${idx + 1}`} value={opt}
+                                  onChange={(e) => {
+                                    const next = [...draft.options];
+                                    next[idx] = e.target.value;
+                                    updateQuestionDraft(section._id, { options: next });
+                                  }} />
+                              ))}
+                            </div>
+                            <div className="row" style={{ gap: 10, flexWrap: "wrap" }}>
+                              <div className="adm-field" style={{ flex: "0 0 auto" }}>
+                                <label className="adm-label">Correct Option</label>
+                                <select className="select" style={{ width: 160 }} value={draft.correctAnswer}
+                                  onChange={(e) => updateQuestionDraft(section._id, { correctAnswer: Number(e.target.value) })}>
+                                  <option value={0}>Option 1</option>
+                                  <option value={1}>Option 2</option>
+                                  <option value={2}>Option 3</option>
+                                  <option value={3}>Option 4</option>
+                                </select>
+                              </div>
+                              <div className="row" style={{ alignSelf: "flex-end", gap: 8 }}>
+                                <button className="adm-btn adm-btn-primary" onClick={() => saveQuestion(section._id)} type="button">
+                                  {isEditing ? "Update Question" : "Add Question"}
+                                </button>
+                                {isEditing && (
+                                  <button className="adm-btn adm-btn-ghost" onClick={() => resetSectionDraft(section._id)} type="button">Cancel</button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Question list */}
+                          {sectionQuestions.length > 0 && (
+                            <div className="adm-q-list">
+                              <p className="adm-label" style={{ marginBottom: 8 }}>Added Questions</p>
+                              <div className="question-list">
+                                {sectionQuestions.map((q, idx) => (
+                                  <div className="adm-q-item" key={q._id}>
+                                    <div className="adm-q-text">Q{idx + 1}. {q.questionText}</div>
+                                    <div className="adm-q-correct">Correct: Option {q.correctAnswer + 1}</div>
+                                    <div className="question-actions">
+                                      <button className="adm-btn adm-btn-ghost adm-btn-sm"
+                                        onClick={() => { setPreviewQuestion(q); setPreviewExamId(exam._id); }} type="button">Preview</button>
+                                      <button className="adm-btn adm-btn-outline adm-btn-sm"
+                                        onClick={() => startEditQuestion(section._id, q)} type="button">Edit</button>
+                                      <button className="adm-btn adm-btn-danger adm-btn-sm"
+                                        onClick={() => deleteQuestion(q._id)} type="button">Delete</button>
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+
+                          {/* Preview box */}
+                          {previewQuestion && previewExamId === exam._id && previewQuestion.sectionId === section._id && (
+                            <div className="adm-preview-wrap">
+                              <div className="adm-preview-label">Student Preview</div>
+                              <div className="preview-box">
+                                <p style={{ marginTop: 0, fontWeight: 600 }}>{previewQuestion.questionText}</p>
+                                {previewQuestion.options.map((opt, oi) => (
+                                  <label className="question-option" key={oi}>
+                                    <input disabled name={`prev-${previewQuestion._id}`} type="radio" /> {opt}
+                                  </label>
+                                ))}
+                                <p className="muted" style={{ marginBottom: 0 }}>Correct: Option {previewQuestion.correctAnswer + 1}</p>
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+
+                    {/* Preview for exam-level (cross-section preview fallback) */}
+                    {previewQuestion && previewExamId === exam._id && !exam.sections?.some(s => s._id === previewQuestion.sectionId) && (
+                      <div className="adm-preview-wrap">
+                        <div className="adm-preview-label">Student Preview</div>
+                        <div className="preview-box">
+                          <p style={{ marginTop: 0, fontWeight: 600 }}>{previewQuestion.questionText}</p>
+                          {previewQuestion.options.map((opt, oi) => (
+                            <label className="question-option" key={oi}>
+                              <input disabled name={`prev-${previewQuestion._id}`} type="radio" /> {opt}
+                            </label>
+                          ))}
+                          <p className="muted" style={{ marginBottom: 0 }}>Correct: Option {previewQuestion.correctAnswer + 1}</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ) : null}
-              </>
-            ) : null}
-                </>
-              );
-            })()}
-          </article>
-        ))}
-      </section>
-    </main>
+            );
+          })}
+        </section>
+      </main>
+    </div>
   );
 }
