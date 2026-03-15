@@ -132,6 +132,10 @@ const joinExamWithVerifiedEmail = async (req, res) => {
       return res.status(404).json({ message: "Exam not found or not published" });
     }
 
+    if (exam.scheduledAt && Date.now() > new Date(exam.scheduledAt).getTime()) {
+      return res.status(403).json({ message: "This exam has already started. Registration is now closed." });
+    }
+
     const otpRecord = await EmailOtp.findOne({ email: normalizedEmail });
     if (!otpRecord || !otpRecord.verifiedAt) {
       return res.status(400).json({ message: "Verify email via OTP before starting exam" });

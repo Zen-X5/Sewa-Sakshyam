@@ -5,6 +5,11 @@ export const metadata = {
   description: "Mock test system for competitive exams",
 };
 
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+};
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">

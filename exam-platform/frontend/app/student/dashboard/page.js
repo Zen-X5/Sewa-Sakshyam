@@ -16,6 +16,12 @@ export default function StudentDashboardPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [exams, setExams] = useState([]);
+  const [now, setNow] = useState(Date.now());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(id);
+  }, []);
 
   useEffect(() => {
     apiRequest("/student/exams", { skipAuth: true })
@@ -85,9 +91,15 @@ export default function StudentDashboardPage() {
                 <div className="stu-meta-item"><span>Marking</span><strong>+{exam.markingScheme.correct} / {exam.markingScheme.wrong}</strong></div>
               </div>
 
-              <Link className="stu-btn stu-btn-primary" href={`/student/start/${exam._id}`}>
-                Start Exam
-              </Link>
+              {exam.scheduledAt && now > new Date(exam.scheduledAt).getTime() ? (
+                <button className="stu-btn stu-btn-primary" disabled>
+                  Exam Has Started
+                </button>
+              ) : (
+                <Link className="stu-btn stu-btn-primary" href={`/student/start/${exam._id}`}>
+                  Start Exam
+                </Link>
+              )}
             </article>
           ))}
         </section>

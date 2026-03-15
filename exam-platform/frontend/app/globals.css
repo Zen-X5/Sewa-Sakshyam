@@ -1196,13 +1196,54 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
   text-transform: capitalize;
 }
 
-@media (max-width: 700px) {
-  .adm-nav { padding: 0 16px; }
-  .adm-main { padding: 16px 12px 40px; }
-  .adm-exam-header { flex-direction: column; }
-  .adm-summary-chips { flex-direction: column; }
-  .adm-summary-item { border-right: none; border-bottom: 1px solid #e5e7eb; }
+@media (max-width: 768px) {
+
+  /* ── Home ── */
+  .home-header { padding: 0 16px; }
+  .home-header-inner { flex-wrap: wrap; padding: 12px 0; gap: 10px; }
+  .home-logo-box { width: 40px; height: 40px; font-size: 15px; }
+  .home-site-name { font-size: 16px; }
+  .home-site-tag { font-size: 10px; }
+  .home-header-nav { display: none; }
+  .home-main { padding: 20px 16px 48px; }
+  .home-welcome-panel { padding: 18px 16px; }
+  .home-welcome-title { font-size: 17px; }
+  .home-info-table td:first-child { width: auto; white-space: normal; }
+  .home-portals { grid-template-columns: 1fr; }
+
+  /* ── Admin login ── */
+  .gov-login-body { padding: 20px 20px 18px; }
+
+  /* ── Admin shell ── */
+  .adm-nav { padding: 0 16px; height: 54px; }
+  .adm-nav-brand { font-size: 16px; }
+  .adm-nav-role { display: none; }
+  .adm-main { padding: 16px 14px 48px; gap: 16px; }
+  .adm-page-title { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .adm-page-title h1 { font-size: 20px; }
+  .adm-card-body { padding: 16px; }
+  .adm-card-header { padding: 12px 16px; }
+  .adm-form-grid { grid-template-columns: 1fr; }
   .adm-options-grid { grid-template-columns: 1fr; }
+  .adm-exam-header { padding: 16px; flex-direction: column; }
+  .adm-exam-body { padding: 16px; }
+  .adm-section-header { padding: 12px 14px; }
+  .adm-summary-chips { flex-direction: column; }
+  .adm-summary-item { border-right: none; border-bottom: 1px solid #e5e7eb; padding: 14px 16px; }
+
+  /* ── Student ── */
+  .stu-header { padding: 0 14px; }
+  .stu-header-inner { min-height: 58px; }
+  .stu-brand { font-size: 16px; }
+  .stu-brand-sub { font-size: 10px; }
+  .stu-main { padding: 16px 14px 40px; gap: 14px; }
+  .stu-card { padding: 14px; }
+  .stu-title { font-size: 18px; }
+  .stu-exam-grid { grid-template-columns: 1fr; }
+  .stu-meta-list { grid-template-columns: 1fr; }
+  .stu-exam-layout { grid-template-columns: 1fr; }
+  .stu-actions-row { flex-direction: column; }
+  .stu-actions-row .stu-btn { width: 100%; text-align: center; }
 }
 
 /* ─── STUDENT UI ───────────────────────────────────────── */
@@ -1623,11 +1664,66 @@ input[type="datetime-local"].input::-webkit-calendar-picker-indicator:hover {
 }
 
 @media (max-width: 860px) {
-  .stu-exam-layout {
-    grid-template-columns: 1fr;
-  }
+  .stu-exam-layout { grid-template-columns: 1fr; }
+  .stu-meta-list { grid-template-columns: 1fr; }
+}
 
-  .stu-meta-list {
-    grid-template-columns: 1fr;
-  }
+/* ─── SMALL PHONES (≤480px) ──────────────────────────────────── */
+@media (max-width: 480px) {
+
+  /* ── Home ── */
+  .home-header-brand { flex-direction: column; align-items: flex-start; gap: 4px; }
+  .home-logo-box { display: none; }
+  .home-site-name { font-size: 15px; }
+  .home-welcome-desc { font-size: 13px; }
+  .home-notice { font-size: 11px; padding: 7px 14px; }
+
+  /* ── Admin login ── */
+  .gov-login-wrapper { padding: 10px; }
+  .gov-login-header { padding: 14px 16px; }
+  .gov-login-body { padding: 18px 16px 16px; }
+  .gov-login-title { font-size: 17px; }
+  .gov-login-footer { padding: 12px 16px; }
+
+  /* ── Admin shell ── */
+  .adm-nav { padding: 0 12px; }
+  .adm-nav-brand { font-size: 14px; }
+  .adm-main { padding: 12px 10px 40px; }
+  .adm-page-title h1 { font-size: 18px; }
+  .adm-card-body { padding: 12px; }
+  .adm-card-header { padding: 10px 12px; font-size: 12px; }
+  .adm-exam-header { padding: 12px; }
+  .adm-exam-body { padding: 12px; }
+  .adm-exam-title { font-size: 15px; }
+  .adm-exam-actions { gap: 6px; }
+  .adm-btn { padding: 8px 12px; font-size: 12px; }
+  .adm-btn-sm { padding: 5px 9px; font-size: 11px; }
+  .adm-section-header { padding: 10px 12px; gap: 8px; }
+  .adm-section-title { font-size: 13px; }
+  .adm-summary-item { padding: 12px 14px; }
+  .adm-summary-value { font-size: 15px; }
+  .adm-table th { padding: 8px 10px; font-size: 11px; }
+  .adm-table td { padding: 8px 10px; font-size: 12px; }
+  .adm-add-section-row { flex-direction: column; align-items: stretch; }
+  .adm-add-section-row .input { min-width: 0; }
+
+  /* ── Student ── */
+  .stu-header { padding: 0 12px; }
+  .stu-header-inner { flex-wrap: wrap; min-height: 52px; gap: 8px; padding: 8px 0; }
+  .stu-brand { font-size: 14px; }
+  .stu-brand-sub { letter-spacing: 0; }
+  .stu-main { padding: 12px 10px 36px; }
+  .stu-card { padding: 12px; }
+  .stu-title { font-size: 16px; }
+  .stu-subtitle { font-size: 14px; }
+  .stu-q-title { font-size: 15px; }
+  .stu-btn { padding: 8px 12px; font-size: 12px; }
+  .stu-nav-grid { gap: 5px; }
+  .stu-nav-btn { padding: 6px 0; font-size: 11px; }
+  .stu-stat-card strong { font-size: 20px; }
+  .stu-stats-grid { grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); }
+  .stu-table th { padding: 8px 8px; font-size: 10px; }
+  .stu-table td { padding: 8px 8px; font-size: 12px; }
+  .stu-inline-actions { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .stu-timer { font-size: 13px; }
 }

@@ -269,6 +269,38 @@ export default function StartExamPage() {
     );
   }
 
+  const examAlreadyStarted = exam.scheduledAt && Date.now() > new Date(exam.scheduledAt).getTime();
+
+  if (examAlreadyStarted) {
+    return (
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <div className="stu-card stu-form">
+            <h1 className="stu-title">{exam.title}</h1>
+            <p className="stu-alert stu-alert-error">
+              This exam has already started. Registration is closed.
+            </p>
+            <div className="stu-meta-list">
+              <div className="stu-meta-item"><span>Started at</span><strong>{formatDateTime(exam.scheduledAt)}</strong></div>
+              <div className="stu-meta-item"><span>Duration</span><strong>{exam.duration} minutes</strong></div>
+            </div>
+            <button className="stu-btn stu-btn-primary" disabled>
+              Exam Has Started
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
   return (
     <div className="stu-shell">
       <header className="stu-header">
