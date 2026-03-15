@@ -1,26 +1,41 @@
 const express = require("express");
+const multer = require("multer");
 const {
   createExam,
   getAdminExams,
   togglePublish,
+  updateExam,
+  deleteExam,
   addSection,
   updateSection,
   deleteSection,
   addQuestion,
   updateQuestion,
   deleteQuestion,
+  uploadQuestionImage,
   getExamAttempts,
   getExamResults,
 } = require("../controllers/adminController");
 const { protect, authorize } = require("../middleware/auth");
 
 const router = express.Router();
+const upload = multer({
+  storage: multer.memoryStorage(),
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB max
+  fileFilter: (_req, file, cb) => {
+    if (file.mimetype.startsWith("image/")) cb(null, true);
+    else cb(new Error("Only image files are allowed"));
+  },
+});
 
 router.use(protect, authorize("admin"));
 
+router.post("/upload-image", upload.single("image"), uploadQuestionImage);
 router.get("/exams", getAdminExams);
 router.post("/exams", createExam);
 router.patch("/exams/:examId/publish", togglePublish);
+router.patch("/exams/:examId", updateExam);
+router.delete("/exams/:examId", deleteExam);
 router.post("/exams/:examId/sections", addSection);
 router.patch("/sections/:sectionId", updateSection);
 router.delete("/sections/:sectionId", deleteSection);
@@ -31,3 +46,4 @@ router.get("/exams/:examId/attempts", getExamAttempts);
 router.get("/exams/:examId/results", getExamResults);
 
 module.exports = router;
+

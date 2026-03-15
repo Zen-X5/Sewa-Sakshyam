@@ -17,7 +17,9 @@ const emailOtpSchema = new mongoose.Schema(
     expiresAt: {
       type: Date,
       required: true,
-      index: true,
+      // TTL index: MongoDB automatically deletes expired OTP documents
+      // so the collection never grows unboundedly
+      index: { expireAfterSeconds: 0 },
     },
     verifiedAt: {
       type: Date,

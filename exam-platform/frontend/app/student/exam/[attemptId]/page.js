@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { apiRequest } from "../../../../lib/api";
+import { apiRequest, resolveApiBaseUrl } from "../../../../lib/api";
 import { getAuth } from "../../../../lib/auth";
 
 const formatTime = (seconds) => {
@@ -11,13 +11,95 @@ const formatTime = (seconds) => {
   return `${mins}:${secs}`;
 };
 
+const QuestionPane = memo(function QuestionPane({
+  currentIndex,
+  currentQuestion,
+  selectedOption,
+  onSelectAnswer,
+  onPrevious,
+  onNext,
+  canGoPrevious,
+  canGoNext,
+  onSubmit,
+  submitting,
+}) {
+  return (
+    <div className="stu-card">
+      <p className="stu-muted">Section: {currentQuestion.sectionName}</p>
+      <h2 className="stu-q-title">Q{currentIndex + 1}. {currentQuestion.questionText}</h2>
+
+      {currentQuestion.imageUrl ? (
+        <div className="stu-q-image">
+          <img src={currentQuestion.imageUrl} alt="Question diagram" />
+        </div>
+      ) : null}
+
+      <div className="stu-options">
+        {currentQuestion.options.map((option, index) => (
+          <label className="stu-option" key={index}>
+            <input
+              checked={selectedOption === index}
+              name={`question-${currentQuestion._id}`}
+              onChange={() => onSelectAnswer(currentQuestion._id, index)}
+              type="radio"
+            />
+            <span>{option}</span>
+          </label>
+        ))}
+      </div>
+
+      <div className="stu-actions-row">
+        <button className="stu-btn stu-btn-secondary" disabled={!canGoPrevious} onClick={onPrevious} type="button">
+          Previous
+        </button>
+
+        <button className="stu-btn stu-btn-primary" disabled={!canGoNext} onClick={onNext} type="button">
+          Next
+        </button>
+
+        <button className="stu-btn stu-btn-danger" disabled={submitting} onClick={onSubmit} type="button">
+          {submitting ? "Submitting..." : "Submit Exam"}
+        </button>
+      </div>
+    </div>
+  );
+});
+
+const NavigatorPane = memo(function NavigatorPane({ questions, navigatorClass, currentIndex, onGoToQuestion }) {
+  return (
+    <aside className="stu-card">
+      <h3 className="stu-subtitle">Question Navigator</h3>
+      <div className="stu-nav-grid">
+        {questions.map((question, index) => (
+          <button
+            className={`stu-nav-btn ${navigatorClass[index]} ${currentIndex === index ? "stu-nav-current" : ""}`}
+            key={question._id}
+            onClick={() => onGoToQuestion(index)}
+            type="button"
+          >
+            {index + 1}
+          </button>
+        ))}
+      </div>
+
+      <div className="stu-nav-legend">
+        <p className="stu-muted">Grey: Not visited</p>
+        <p className="stu-muted">Orange: Visited but unanswered</p>
+        <p className="stu-muted">Green: Answered</p>
+      </div>
+    </aside>
+  );
+});
+
 export default function ExamPage() {
   const params = useParams();
   const router = useRouter();
+
   const [token, setToken] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [examState, setExamState] = useState(null);
+  const [attemptStartTime, setAttemptStartTime] = useState("");
   const [currentIndex, setCurrentIndex] = useState(0);
   const [answers, setAnswers] = useState({});
   const [visited, setVisited] = useState({});
@@ -27,9 +109,86 @@ export default function ExamPage() {
   const [fullscreenArmed, setFullscreenArmed] = useState(false);
 
   const submittingRef = useRef(false);
+  const answersRef = useRef({});
+  const flushInFlightRef = useRef(false);
+  const pendingFlushRef = useRef(false);
 
   const questions = examState?.questions || [];
   const currentQuestion = questions[currentIndex];
+
+  const flushAnswers = useCallback(
+    async (reason = "periodic", options = {}) => {
+      const keepalive = Boolean(options.keepalive);
+      if (!token || !params.attemptId || submittingRef.current) {
+        return;
+      }
+
+      if (flushInFlightRef.current) {
+        pendingFlushRef.current = true;
+        return;
+      }
+
+      flushInFlightRef.current = true;
+      if (!keepalive && reason !== "periodic") {
+        setSaving(true);
+      }
+
+      try {
+        const payload = {
+          answers: answersRef.current,
+          reason,
+        };
+
+        let responseData = null;
+
+        if (keepalive) {
+          const response = await fetch(`${resolveApiBaseUrl()}/student/attempts/${params.attemptId}/save`, {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              Authorization: `Bearer ${token}`,
+            },
+            body: JSON.stringify(payload),
+            keepalive: true,
+          });
+
+          responseData = await response.json().catch(() => ({}));
+          if (!response.ok) {
+            throw new Error(responseData.message || "Failed to save answers");
+          }
+        } else {
+          responseData = await apiRequest(`/student/attempts/${params.attemptId}/save`, {
+            method: "POST",
+            token,
+            body: payload,
+          });
+        }
+
+        if (responseData?.submitted) {
+          router.replace(`/student/result/${params.attemptId}`);
+        }
+      } catch (err) {
+        if (!keepalive) {
+          if (String(err.message || "").toLowerCase().includes("submitted")) {
+            router.replace(`/student/result/${params.attemptId}`);
+          } else {
+            setError(err.message || "Failed to save answers");
+          }
+        }
+      } finally {
+        flushInFlightRef.current = false;
+        setSaving(false);
+
+        if (pendingFlushRef.current && !keepalive) {
+          pendingFlushRef.current = false;
+          setTimeout(() => {
+            flushAnswers("queued");
+          }, 0);
+        }
+      }
+    },
+    [params.attemptId, router, token]
+  );
 
   const submitExam = useCallback(
     async (reason = "manual") => {
@@ -39,8 +198,11 @@ export default function ExamPage() {
 
       submittingRef.current = true;
       setSubmitting(true);
+      setError("");
 
       try {
+        await flushAnswers("submit");
+
         const result = await apiRequest(`/student/attempts/${params.attemptId}/submit`, {
           method: "POST",
           token,
@@ -54,22 +216,72 @@ export default function ExamPage() {
         setSubmitting(false);
       }
     },
-    [params.attemptId, router, token]
+    [flushAnswers, params.attemptId, router, token]
   );
 
   useEffect(() => {
     const auth = getAuth();
     if (!auth || auth?.user?.role !== "student") {
-      router.push("/student/login");
+      router.push("/student/dashboard");
       return;
     }
 
     setToken(auth.token);
 
+    const hydrateFromSeed = () => {
+      try {
+        const raw = sessionStorage.getItem(`attempt-seed:${params.attemptId}`);
+        if (!raw) {
+          return false;
+        }
+
+        const seed = JSON.parse(raw);
+        if (!seed?.examData?.exam || !Array.isArray(seed?.examData?.questions)) {
+          return false;
+        }
+
+        sessionStorage.removeItem(`attempt-seed:${params.attemptId}`);
+
+        const seededAnswers = seed.answers || {};
+        const seededExamState = {
+          exam: seed.examData.exam,
+          sections: seed.examData.sections || [],
+          questions: seed.examData.questions || [],
+          answers: seededAnswers,
+        };
+
+        setExamState(seededExamState);
+        setAnswers(seededAnswers);
+        answersRef.current = seededAnswers;
+        setAttemptStartTime(seed.startTime || new Date().toISOString());
+
+        const initialVisited = {};
+        if (seededExamState.questions?.[0]?._id) {
+          initialVisited[seededExamState.questions[0]._id] = true;
+        }
+        setVisited(initialVisited);
+
+        const examSeconds = Number(seededExamState.exam.duration || 0) * 60;
+        const elapsedSeconds = Math.floor((Date.now() - new Date(seed.startTime || Date.now()).getTime()) / 1000);
+        setRemainingSeconds(Math.max(examSeconds - elapsedSeconds, 0));
+
+        return true;
+      } catch {
+        return false;
+      }
+    };
+
+    if (hydrateFromSeed()) {
+      setLoading(false);
+      return;
+    }
+
     apiRequest(`/student/attempts/${params.attemptId}`, { token: auth.token })
       .then((data) => {
         setExamState(data);
+        setAttemptStartTime(data.startTime);
         setAnswers(data.answers || {});
+        answersRef.current = data.answers || {};
 
         const initialVisited = {};
         if (data.questions?.[0]?._id) {
@@ -93,7 +305,7 @@ export default function ExamPage() {
   }, [params.attemptId, router]);
 
   useEffect(() => {
-    if (!examState) {
+    if (!examState || !attemptStartTime) {
       return;
     }
 
@@ -102,12 +314,48 @@ export default function ExamPage() {
       return;
     }
 
+    // Recompute from startTime on each tick to prevent JS interval drift
+    const examDurationMs = Number(examState.exam.duration || 0) * 60 * 1000;
+    const startMs = new Date(attemptStartTime).getTime();
+
     const interval = setInterval(() => {
-      setRemainingSeconds((prev) => prev - 1);
+      const elapsed = Date.now() - startMs;
+      const fresh = Math.max(0, Math.ceil((examDurationMs - elapsed) / 1000));
+      setRemainingSeconds(fresh);
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [examState, remainingSeconds, submitExam]);
+  }, [examState, attemptStartTime, remainingSeconds, submitExam]);
+
+  useEffect(() => {
+    if (!examState) {
+      return;
+    }
+
+    const interval = setInterval(() => {
+      flushAnswers("periodic");
+    }, 15000);
+
+    return () => clearInterval(interval);
+  }, [examState, flushAnswers]);
+
+  useEffect(() => {
+    if (!examState) {
+      return;
+    }
+
+    const flushOnExit = () => {
+      flushAnswers("unload", { keepalive: true });
+    };
+
+    window.addEventListener("beforeunload", flushOnExit);
+    window.addEventListener("pagehide", flushOnExit);
+
+    return () => {
+      window.removeEventListener("beforeunload", flushOnExit);
+      window.removeEventListener("pagehide", flushOnExit);
+    };
+  }, [examState, flushAnswers]);
 
   useEffect(() => {
     if (!examState) {
@@ -124,9 +372,9 @@ export default function ExamPage() {
       }
     };
 
-    const onBlur = () => {
-      triggerCheatSubmit();
-    };
+    // NOTE: window.blur is intentionally NOT used — it fires on any OS notification,
+    // phone banner, address bar click, or popup, which would unfairly penalise students.
+    // visibilitychange (tab switch / minimize) is sufficient for cheat detection.
 
     const onFullscreenChange = () => {
       if (fullscreenArmed && !document.fullscreenElement) {
@@ -135,7 +383,6 @@ export default function ExamPage() {
     };
 
     document.addEventListener("visibilitychange", onVisibilityChange);
-    window.addEventListener("blur", onBlur);
     document.addEventListener("fullscreenchange", onFullscreenChange);
 
     if (document.documentElement.requestFullscreen) {
@@ -149,162 +396,141 @@ export default function ExamPage() {
 
     return () => {
       document.removeEventListener("visibilitychange", onVisibilityChange);
-      window.removeEventListener("blur", onBlur);
       document.removeEventListener("fullscreenchange", onFullscreenChange);
     };
   }, [examState, fullscreenArmed, submitExam]);
 
-  const selectAnswer = async (questionId, selectedOption) => {
-    setSaving(true);
+  const selectAnswer = useCallback((questionId, selectedOption) => {
     setError("");
 
-    const nextAnswers = { ...answers, [questionId]: selectedOption };
-    setAnswers(nextAnswers);
+    setAnswers((prev) => {
+      const next = { ...prev, [questionId]: selectedOption };
+      answersRef.current = next;
+      return next;
+    });
+  }, []);
 
-    try {
-      const data = await apiRequest(`/student/attempts/${params.attemptId}/answer`, {
-        method: "PATCH",
-        token,
-        body: { questionId, selectedOption },
-      });
+  const goToQuestion = useCallback(
+    (index) => {
+      const boundedIndex = Math.max(0, Math.min(index, questions.length - 1));
+      setCurrentIndex(boundedIndex);
 
-      if (data.submitted) {
-        router.replace(`/student/result/${params.attemptId}`);
+      const question = questions[boundedIndex];
+      if (question?._id) {
+        setVisited((prev) => ({ ...prev, [question._id]: true }));
       }
-    } catch (err) {
-      if (err.message.includes("submitted")) {
-        router.replace(`/student/result/${params.attemptId}`);
-        return;
-      }
-      setError(err.message);
-    } finally {
-      setSaving(false);
-    }
-  };
 
-  const goToQuestion = (index) => {
-    const boundedIndex = Math.max(0, Math.min(index, questions.length - 1));
-    setCurrentIndex(boundedIndex);
+      flushAnswers("navigation");
+    },
+    [flushAnswers, questions]
+  );
 
-    const question = questions[boundedIndex];
-    if (question?._id) {
-      setVisited((prev) => ({ ...prev, [question._id]: true }));
-    }
-  };
+  const onNext = useCallback(() => {
+    goToQuestion(currentIndex + 1);
+  }, [currentIndex, goToQuestion]);
+
+  const onPrevious = useCallback(() => {
+    goToQuestion(currentIndex - 1);
+  }, [currentIndex, goToQuestion]);
 
   const navigatorClass = useMemo(
     () =>
-      questions.map((question, index) => {
+      questions.map((question) => {
         if (!visited[question._id]) {
-          return "nav-not-visited";
+          return "stu-nav-not-visited";
         }
 
         if (answers[question._id] === undefined) {
-          return "nav-unanswered";
+          return "stu-nav-unanswered";
         }
 
-        return "nav-answered";
+        return "stu-nav-answered";
       }),
     [answers, questions, visited]
   );
 
   if (loading) {
     return (
-      <main className="container">
-        <p>Loading exam...</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <div className="stu-card">
+            <p className="stu-muted">Loading exam...</p>
+          </div>
+        </main>
+      </div>
     );
   }
 
   if (!examState || !currentQuestion) {
     return (
-      <main className="container">
-        <p className="error">{error || "Exam data unavailable"}</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <p className="stu-alert stu-alert-error">{error || "Exam data unavailable"}</p>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="container">
-      <div className="card row space-between">
-        <div>
-          <h1 className="title">{examState.exam.title}</h1>
-          <p className="muted">
-            Question {currentIndex + 1} of {questions.length}
-          </p>
-        </div>
-        <div className="timer">Time Left: {formatTime(Math.max(remainingSeconds, 0))}</div>
-      </div>
-
-      <section className="exam-layout">
-        <div className="card">
-          <p className="muted">Section: {currentQuestion.sectionName}</p>
-          <h2 className="title">Q{currentIndex + 1}. {currentQuestion.questionText}</h2>
-
+    <div className="stu-shell">
+      <header className="stu-header">
+        <div className="stu-header-inner">
           <div>
-            {currentQuestion.options.map((option, index) => (
-              <label className="question-option" key={index}>
-                <input
-                  checked={answers[currentQuestion._id] === index}
-                  name={`question-${currentQuestion._id}`}
-                  onChange={() => selectAnswer(currentQuestion._id, index)}
-                  type="radio"
-                />{" "}
-                {option}
-              </label>
-            ))}
+            <div className="stu-brand">Sewa Sakshyam</div>
+            <div className="stu-brand-sub">Candidate Examination Portal</div>
           </div>
+          <div className="stu-timer">Time Left: {formatTime(Math.max(remainingSeconds, 0))}</div>
+        </div>
+      </header>
 
-          <div className="row" style={{ marginTop: 12 }}>
-            <button
-              className="button outline"
-              disabled={currentIndex === 0}
-              onClick={() => goToQuestion(currentIndex - 1)}
-              type="button"
-            >
-              Previous
-            </button>
-
-            <button
-              className="button"
-              disabled={currentIndex === questions.length - 1}
-              onClick={() => goToQuestion(currentIndex + 1)}
-              type="button"
-            >
-              Next
-            </button>
-
-            <button className="button danger" disabled={submitting} onClick={() => submitExam("manual")} type="button">
-              {submitting ? "Submitting..." : "Submit Exam"}
-            </button>
-          </div>
-
-          {saving ? <p className="muted">Saving answer...</p> : null}
-          {error ? <p className="error">{error}</p> : null}
+      <main className="stu-main">
+        <div className="stu-card stu-panel-title">
+          <h1 className="stu-title">{examState.exam.title}</h1>
+          <p className="stu-muted">Question {currentIndex + 1} of {questions.length}</p>
+          {attemptStartTime ? <p className="stu-muted">Started at: {new Date(attemptStartTime).toLocaleTimeString()}</p> : null}
         </div>
 
-        <aside className="card">
-          <h3 className="title">Question Navigator</h3>
-          <div className="navigator-grid">
-            {questions.map((question, index) => (
-              <button
-                className={`nav-button ${navigatorClass[index]} ${currentIndex === index ? "nav-current" : ""}`}
-                key={question._id}
-                onClick={() => goToQuestion(index)}
-                type="button"
-              >
-                {index + 1}
-              </button>
-            ))}
-          </div>
+        <section className="stu-exam-layout">
+          <QuestionPane
+            currentIndex={currentIndex}
+            currentQuestion={currentQuestion}
+            selectedOption={answers[currentQuestion._id]}
+            onSelectAnswer={selectAnswer}
+            onPrevious={onPrevious}
+            onNext={onNext}
+            canGoPrevious={currentIndex !== 0}
+            canGoNext={currentIndex !== questions.length - 1}
+            onSubmit={() => submitExam("manual")}
+            submitting={submitting}
+          />
 
-          <div style={{ marginTop: 12 }}>
-            <p className="muted">Grey: Not Visited</p>
-            <p className="muted">Orange: Visited but Unanswered</p>
-            <p className="muted">Green: Answered</p>
-          </div>
-        </aside>
-      </section>
-    </main>
+          <NavigatorPane
+            questions={questions}
+            navigatorClass={navigatorClass}
+            currentIndex={currentIndex}
+            onGoToQuestion={goToQuestion}
+          />
+        </section>
+
+        {saving ? <p className="stu-muted">Saving latest answers...</p> : null}
+        {error ? <p className="stu-alert stu-alert-error">{error}</p> : null}
+      </main>
+    </div>
   );
 }

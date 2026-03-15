@@ -2,9 +2,11 @@ const express = require("express");
 const {
   getPublishedExams,
   getExamInstructions,
+  getExamPreload,
   joinExamWithVerifiedEmail,
   startExamAttempt,
   getAttemptState,
+  saveAttemptAnswersBatch,
   saveAnswer,
   submitAttempt,
   getAttemptResult,
@@ -19,9 +21,12 @@ router.post("/exams/:examId/join", joinExamWithVerifiedEmail);
 
 router.use(protect, authorize("student"));
 
+router.get("/exams/:examId/preload", getExamPreload);
+
 router.post("/exams/:examId/start", startExamAttempt);
 
 router.get("/attempts/:attemptId", getAttemptState);
+router.post("/attempts/:attemptId/save", saveAttemptAnswersBatch);
 router.patch("/attempts/:attemptId/answer", saveAnswer);
 router.post("/attempts/:attemptId/submit", submitAttempt);
 router.get("/attempts/:attemptId/result", getAttemptResult);

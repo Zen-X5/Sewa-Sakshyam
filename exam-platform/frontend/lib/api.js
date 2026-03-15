@@ -1,8 +1,24 @@
 import { getAuth } from "./auth";
 
-const API_BASE = process.env.NEXT_PUBLIC_API_BASE_URL || "http://localhost:5000/api";
+const normalizeApiBase = (value) => String(value || "").replace(/\/$/, "");
+
+export const resolveApiBaseUrl = () => {
+  if (process.env.NEXT_PUBLIC_API_BASE_URL) {
+    return normalizeApiBase(process.env.NEXT_PUBLIC_API_BASE_URL);
+  }
+
+  if (typeof window !== "undefined") {
+    const { protocol, hostname } = window.location;
+    return `${protocol}//${hostname}:5000/api`;
+  }
+
+  return "http://localhost:5000/api";
+};
+
+export const resolveApiOrigin = () => resolveApiBaseUrl().replace(/\/api\/?$/, "");
 
 export const apiRequest = async (path, { method = "GET", body, token, skipAuth = false } = {}) => {
+  const apiBase = resolveApiBaseUrl();
   const auth = getAuth();
   const bearerToken = token || auth?.token;
 
@@ -14,7 +30,7 @@ export const apiRequest = async (path, { method = "GET", body, token, skipAuth =
     headers.Authorization = `Bearer ${bearerToken}`;
   }
 
-  const response = await fetch(`${API_BASE}${path}`, {
+  const response = await fetch(`${apiBase}${path}`, {
     method,
     headers,
     body: body ? JSON.stringify(body) : undefined,

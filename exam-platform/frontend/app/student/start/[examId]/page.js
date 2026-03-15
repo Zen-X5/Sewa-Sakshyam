@@ -2,7 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
-import { apiRequest } from "../../../../lib/api";
+import { io } from "socket.io-client";
+import { apiRequest, resolveApiOrigin } from "../../../../lib/api";
 import { saveAuth } from "../../../../lib/auth";
 
 const formatDateTime = (value) => new Date(value).toLocaleString();
@@ -31,7 +32,11 @@ export default function StartExamPage() {
   const [starting, setStarting] = useState(false);
   const [joinedToken, setJoinedToken] = useState("");
   const [joined, setJoined] = useState(false);
+  const [examStartSignal, setExamStartSignal] = useState(false);
   const [remainingSeconds, setRemainingSeconds] = useState(0);
+  const [preloadingExam, setPreloadingExam] = useState(false);
+  const [preloadedExamData, setPreloadedExamData] = useState(null);
+  const [preloadAttempted, setPreloadAttempted] = useState(false);
 
   const scheduleTimestamp = useMemo(() => {
     if (!exam?.scheduledAt) {
@@ -73,11 +78,46 @@ export default function StartExamPage() {
   }, [joined, scheduleTimestamp]);
 
   useEffect(() => {
+    if (!joined || !joinedToken || !params.examId || !scheduleTimestamp) {
+      return;
+    }
+
+    if (preloadedExamData || preloadingExam || preloadAttempted) {
+      return;
+    }
+
+    if (Date.now() >= scheduleTimestamp) {
+      return;
+    }
+
+    if (remainingSeconds <= 0 || remainingSeconds > 30) {
+      return;
+    }
+
+    const preloadExam = async () => {
+      setPreloadingExam(true);
+      setPreloadAttempted(true);
+      try {
+        const payload = await apiRequest(`/student/exams/${params.examId}/preload`, {
+          token: joinedToken,
+        });
+        setPreloadedExamData(payload);
+        sessionStorage.setItem(`exam-preload:${params.examId}`, JSON.stringify(payload));
+      } catch {
+      } finally {
+        setPreloadingExam(false);
+      }
+    };
+
+    preloadExam();
+  }, [joined, joinedToken, params.examId, scheduleTimestamp, remainingSeconds, preloadedExamData, preloadingExam, preloadAttempted]);
+
+  useEffect(() => {
     if (!joined || !joinedToken) {
       return;
     }
 
-    if (scheduleTimestamp && Date.now() < scheduleTimestamp) {
+    if (!examStartSignal && scheduleTimestamp && Date.now() < scheduleTimestamp) {
       return;
     }
 
@@ -89,6 +129,24 @@ export default function StartExamPage() {
           method: "POST",
           token: joinedToken,
         });
+
+        const cachedPreload = preloadedExamData || (() => {
+          try {
+            const raw = sessionStorage.getItem(`exam-preload:${params.examId}`);
+            return raw ? JSON.parse(raw) : null;
+          } catch {
+            return null;
+          }
+        })();
+
+        const seedPayload = {
+          attemptId: attempt._id,
+          startTime: attempt.startTime || new Date().toISOString(),
+          examData: cachedPreload || null,
+          answers: {},
+        };
+        sessionStorage.setItem(`attempt-seed:${attempt._id}`, JSON.stringify(seedPayload));
+
         router.replace(`/student/exam/${attempt._id}`);
       } catch (err) {
         setError(err.message);
@@ -98,7 +156,39 @@ export default function StartExamPage() {
     };
 
     startAttempt();
-  }, [joined, joinedToken, params.examId, router, scheduleTimestamp]);
+  }, [joined, joinedToken, params.examId, router, scheduleTimestamp, examStartSignal, preloadedExamData]);
+
+  useEffect(() => {
+    if (!joined || !params.examId) {
+      return;
+    }
+
+    const shouldWaitForStart = scheduleTimestamp && Date.now() < scheduleTimestamp;
+    if (!shouldWaitForStart) {
+      return;
+    }
+
+    const socket = io(resolveApiOrigin(), {
+      transports: ["websocket", "polling"],
+    });
+
+    socket.on("connect", () => {
+      socket.emit("join-exam-room", { examId: params.examId });
+    });
+
+    socket.on("exam-started", (payload) => {
+      if (!payload?.examId || String(payload.examId) !== String(params.examId)) {
+        return;
+      }
+      setExamStartSignal(true);
+      setRemainingSeconds(0);
+      setMessage("Exam has started. Opening questions...");
+    });
+
+    return () => {
+      socket.disconnect();
+    };
+  }, [joined, params.examId, scheduleTimestamp]);
 
   const sendOtp = async () => {
     if (!form.email) {
@@ -179,6 +269,9 @@ export default function StartExamPage() {
       saveAuth(payload);
       setJoinedToken(payload.token);
       setJoined(true);
+      setExamStartSignal(false);
+      setPreloadedExamData(null);
+      setPreloadAttempted(false);
 
       if (!payload.exam?.scheduledAt || Date.now() >= new Date(payload.exam.scheduledAt).getTime()) {
         setMessage("Exam has started. Opening questions...");
@@ -196,17 +289,39 @@ export default function StartExamPage() {
 
   if (loading) {
     return (
-      <main className="container">
-        <p>Loading exam details...</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <div className="stu-card">
+            <p className="stu-muted">Loading exam details...</p>
+          </div>
+        </main>
+      </div>
     );
   }
 
   if (!exam) {
     return (
-      <main className="container">
-        <p className="error">{error || "Exam not available"}</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <p className="stu-alert stu-alert-error">{error || "Exam not available"}</p>
+        </main>
+      </div>
     );
   }
 
@@ -214,94 +329,171 @@ export default function StartExamPage() {
     const isBeforeStart = scheduleTimestamp && Date.now() < scheduleTimestamp;
 
     return (
-      <main className="container">
-        <div className="card">
-          <h1 className="title">{exam.title}</h1>
-          {isBeforeStart ? (
-            <>
-              <p className="muted">Exam starts at: {formatDateTime(exam.scheduledAt)}</p>
-              <p className="timer">Countdown: {formatCountdown(remainingSeconds)}</p>
-              <p className="muted">Questions will appear automatically when countdown reaches zero.</p>
-            </>
-          ) : (
-            <p className="muted">Exam time reached. Loading questions...</p>
-          )}
-          {starting ? <p className="muted">Starting exam...</p> : null}
-          {error ? <p className="error">{error}</p> : null}
-          {message ? <p className="success-text">{message}</p> : null}
-        </div>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+
+        <main className="stu-main">
+          <div className="stu-card">
+            <h1 className="stu-title">{exam.title}</h1>
+
+            {isBeforeStart ? (
+              <>
+                <p className="stu-muted">Exam starts at: {formatDateTime(exam.scheduledAt)}</p>
+                <div className="stu-timer">Countdown: {formatCountdown(remainingSeconds)}</div>
+                <p className="stu-muted">Questions will open automatically when countdown reaches zero.</p>
+                {preloadingExam ? <p className="stu-muted">Preparing exam paper...</p> : null}
+              </>
+            ) : (
+              <p className="stu-muted">Exam time reached. Loading questions...</p>
+            )}
+
+            {starting ? <p className="stu-muted">Starting exam...</p> : null}
+            {error ? <p className="stu-alert stu-alert-error">{error}</p> : null}
+            {message ? <p className="stu-alert stu-alert-success">{message}</p> : null}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  const examAlreadyStarted = exam.scheduledAt && Date.now() > new Date(exam.scheduledAt).getTime();
+
+  if (examAlreadyStarted) {
+    return (
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <div className="stu-card stu-form">
+            <h1 className="stu-title">{exam.title}</h1>
+            <p className="stu-alert stu-alert-error">
+              This exam has already started. Registration is closed.
+            </p>
+            <div className="stu-meta-list">
+              <div className="stu-meta-item"><span>Started at</span><strong>{formatDateTime(exam.scheduledAt)}</strong></div>
+              <div className="stu-meta-item"><span>Duration</span><strong>{exam.duration} minutes</strong></div>
+            </div>
+            <button className="stu-btn stu-btn-primary" disabled>
+              Exam Has Started
+            </button>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="container">
-      <form className="card stack" onSubmit={handleStartExam}>
-        <h1 className="title">{exam.title}</h1>
-
-        <p className="muted">Scheduled: {formatDateTime(exam.scheduledAt)}</p>
-        <p className="muted">Duration: {exam.duration} minutes</p>
-        <p className="muted">Total Questions: {exam.totalQuestions}</p>
-
-        <input
-          className="input"
-          placeholder="Full name"
-          value={form.name}
-          onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
-          required
-        />
-
-        <input
-          className="input"
-          type="email"
-          placeholder="Email"
-          value={form.email}
-          onChange={(event) => {
-            const email = event.target.value;
-            setForm((prev) => ({ ...prev, email }));
-            setOtpSent(false);
-            setOtpVerified(false);
-          }}
-          required
-        />
-
-        <div className="row">
-          <button className="button outline" disabled={otpLoading} onClick={sendOtp} type="button">
-            {otpLoading ? "Sending OTP..." : "Send OTP"}
-          </button>
-          <span className="muted">{otpSent ? "OTP sent" : "OTP not sent"}</span>
+    <div className="stu-shell">
+      <header className="stu-header">
+        <div className="stu-header-inner">
+          <div>
+            <div className="stu-brand">Sewa Sakshyam</div>
+            <div className="stu-brand-sub">Candidate Examination Portal</div>
+          </div>
         </div>
+      </header>
 
-        <input
-          className="input"
-          placeholder="Enter OTP"
-          value={form.otp}
-          onChange={(event) => setForm((prev) => ({ ...prev, otp: event.target.value }))}
-          required
-        />
+      <main className="stu-main">
+        <form className="stu-card stu-form" onSubmit={handleStartExam}>
+          <h1 className="stu-title">{exam.title}</h1>
 
-        <div className="row">
-          <button className="button outline" disabled={verifyLoading || !otpSent} onClick={verifyOtp} type="button">
-            {verifyLoading ? "Verifying..." : "Verify OTP"}
+          <div className="stu-meta-list">
+            <div className="stu-meta-item"><span>Scheduled</span><strong>{formatDateTime(exam.scheduledAt)}</strong></div>
+            <div className="stu-meta-item"><span>Duration</span><strong>{exam.duration} minutes</strong></div>
+            <div className="stu-meta-item"><span>Total Questions</span><strong>{exam.totalQuestions}</strong></div>
+          </div>
+
+          <div className="stu-form-grid">
+            <div className="stu-field">
+              <label className="stu-label" htmlFor="student-name">Full Name</label>
+              <input
+                id="student-name"
+                className="stu-input"
+                placeholder="Enter full name"
+                value={form.name}
+                onChange={(event) => setForm((prev) => ({ ...prev, name: event.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="stu-field">
+              <label className="stu-label" htmlFor="student-email">Email Address</label>
+              <input
+                id="student-email"
+                className="stu-input"
+                type="email"
+                placeholder="Enter email"
+                value={form.email}
+                onChange={(event) => {
+                  const email = event.target.value;
+                  setForm((prev) => ({ ...prev, email }));
+                  setOtpSent(false);
+                  setOtpVerified(false);
+                }}
+                required
+              />
+            </div>
+
+            <div className="stu-inline-actions">
+              <button className="stu-btn stu-btn-secondary" disabled={otpLoading} onClick={sendOtp} type="button">
+                {otpLoading ? "Sending OTP..." : "Send OTP"}
+              </button>
+              <span className="stu-status-text">{otpSent ? "OTP sent" : "OTP not sent"}</span>
+            </div>
+
+            <div className="stu-field">
+              <label className="stu-label" htmlFor="student-otp">OTP</label>
+              <input
+                id="student-otp"
+                className="stu-input"
+                placeholder="Enter OTP"
+                value={form.otp}
+                onChange={(event) => setForm((prev) => ({ ...prev, otp: event.target.value }))}
+                required
+              />
+            </div>
+
+            <div className="stu-inline-actions">
+              <button className="stu-btn stu-btn-secondary" disabled={verifyLoading || !otpSent} onClick={verifyOtp} type="button">
+                {verifyLoading ? "Verifying..." : "Verify OTP"}
+              </button>
+              <span className="stu-status-text">{otpVerified ? "Email verified" : "Email not verified"}</span>
+            </div>
+
+            <div className="stu-field">
+              <label className="stu-label" htmlFor="student-institute">Institute Name</label>
+              <input
+                id="student-institute"
+                className="stu-input"
+                placeholder="Enter institute name"
+                value={form.instituteName}
+                onChange={(event) => setForm((prev) => ({ ...prev, instituteName: event.target.value }))}
+                required
+              />
+            </div>
+          </div>
+
+          <button className="stu-btn stu-btn-primary" disabled={joining} type="submit">
+            {joining ? "Preparing..." : "Start Exam"}
           </button>
-          <span className="muted">{otpVerified ? "Email verified" : "Email not verified"}</span>
-        </div>
 
-        <input
-          className="input"
-          placeholder="Institute name"
-          value={form.instituteName}
-          onChange={(event) => setForm((prev) => ({ ...prev, instituteName: event.target.value }))}
-          required
-        />
-
-        <button className="button" disabled={joining} type="submit">
-          {joining ? "Preparing..." : "Start Exam"}
-        </button>
-
-        {error ? <p className="error">{error}</p> : null}
-        {message ? <p className="success-text">{message}</p> : null}
-      </form>
-    </main>
+          {error ? <p className="stu-alert stu-alert-error">{error}</p> : null}
+          {message ? <p className="stu-alert stu-alert-success">{message}</p> : null}
+        </form>
+      </main>
+    </div>
   );
 }
