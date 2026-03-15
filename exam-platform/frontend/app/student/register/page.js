@@ -11,8 +11,20 @@ export default function StudentRegisterDeprecatedPage() {
   }, [router]);
 
   return (
-    <main className="container">
-      <p>Student registration page is replaced by Start Exam flow. Redirecting...</p>
-    </main>
+    <div className="stu-shell">
+      <header className="stu-header">
+        <div className="stu-header-inner">
+          <div>
+            <div className="stu-brand">Sewa Sakshyam</div>
+            <div className="stu-brand-sub">Candidate Examination Portal</div>
+          </div>
+        </div>
+      </header>
+      <main className="stu-main">
+        <div className="stu-card">
+          <p className="stu-muted">Student registration is replaced by the start exam flow. Redirecting...</p>
+        </div>
+      </main>
+    </div>
   );
 }

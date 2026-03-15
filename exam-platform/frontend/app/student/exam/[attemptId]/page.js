@@ -60,7 +60,7 @@ export default function ExamPage() {
   useEffect(() => {
     const auth = getAuth();
     if (!auth || auth?.user?.role !== "student") {
-      router.push("/student/login");
+      router.push("/student/dashboard");
       return;
     }
 
@@ -196,115 +196,144 @@ export default function ExamPage() {
     () =>
       questions.map((question, index) => {
         if (!visited[question._id]) {
-          return "nav-not-visited";
+          return "stu-nav-not-visited";
         }
 
         if (answers[question._id] === undefined) {
-          return "nav-unanswered";
+          return "stu-nav-unanswered";
         }
 
-        return "nav-answered";
+        return "stu-nav-answered";
       }),
     [answers, questions, visited]
   );
 
   if (loading) {
     return (
-      <main className="container">
-        <p>Loading exam...</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <div className="stu-card">
+            <p className="stu-muted">Loading exam...</p>
+          </div>
+        </main>
+      </div>
     );
   }
 
   if (!examState || !currentQuestion) {
     return (
-      <main className="container">
-        <p className="error">{error || "Exam data unavailable"}</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <p className="stu-alert stu-alert-error">{error || "Exam data unavailable"}</p>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="container">
-      <div className="card row space-between">
-        <div>
-          <h1 className="title">{examState.exam.title}</h1>
-          <p className="muted">
-            Question {currentIndex + 1} of {questions.length}
-          </p>
-        </div>
-        <div className="timer">Time Left: {formatTime(Math.max(remainingSeconds, 0))}</div>
-      </div>
-
-      <section className="exam-layout">
-        <div className="card">
-          <p className="muted">Section: {currentQuestion.sectionName}</p>
-          <h2 className="title">Q{currentIndex + 1}. {currentQuestion.questionText}</h2>
-
+    <div className="stu-shell">
+      <header className="stu-header">
+        <div className="stu-header-inner">
           <div>
-            {currentQuestion.options.map((option, index) => (
-              <label className="question-option" key={index}>
-                <input
-                  checked={answers[currentQuestion._id] === index}
-                  name={`question-${currentQuestion._id}`}
-                  onChange={() => selectAnswer(currentQuestion._id, index)}
-                  type="radio"
-                />{" "}
-                {option}
-              </label>
-            ))}
+            <div className="stu-brand">Sewa Sakshyam</div>
+            <div className="stu-brand-sub">Candidate Examination Portal</div>
           </div>
+          <div className="stu-timer">Time Left: {formatTime(Math.max(remainingSeconds, 0))}</div>
+        </div>
+      </header>
 
-          <div className="row" style={{ marginTop: 12 }}>
-            <button
-              className="button outline"
-              disabled={currentIndex === 0}
-              onClick={() => goToQuestion(currentIndex - 1)}
-              type="button"
-            >
-              Previous
-            </button>
-
-            <button
-              className="button"
-              disabled={currentIndex === questions.length - 1}
-              onClick={() => goToQuestion(currentIndex + 1)}
-              type="button"
-            >
-              Next
-            </button>
-
-            <button className="button danger" disabled={submitting} onClick={() => submitExam("manual")} type="button">
-              {submitting ? "Submitting..." : "Submit Exam"}
-            </button>
-          </div>
-
-          {saving ? <p className="muted">Saving answer...</p> : null}
-          {error ? <p className="error">{error}</p> : null}
+      <main className="stu-main">
+        <div className="stu-card stu-panel-title">
+          <h1 className="stu-title">{examState.exam.title}</h1>
+          <p className="stu-muted">Question {currentIndex + 1} of {questions.length}</p>
         </div>
 
-        <aside className="card">
-          <h3 className="title">Question Navigator</h3>
-          <div className="navigator-grid">
-            {questions.map((question, index) => (
+        <section className="stu-exam-layout">
+          <div className="stu-card">
+            <p className="stu-muted">Section: {currentQuestion.sectionName}</p>
+            <h2 className="stu-q-title">Q{currentIndex + 1}. {currentQuestion.questionText}</h2>
+
+            <div className="stu-options">
+              {currentQuestion.options.map((option, index) => (
+                <label className="stu-option" key={index}>
+                  <input
+                    checked={answers[currentQuestion._id] === index}
+                    name={`question-${currentQuestion._id}`}
+                    onChange={() => selectAnswer(currentQuestion._id, index)}
+                    type="radio"
+                  />
+                  <span>{option}</span>
+                </label>
+              ))}
+            </div>
+
+            <div className="stu-actions-row">
               <button
-                className={`nav-button ${navigatorClass[index]} ${currentIndex === index ? "nav-current" : ""}`}
-                key={question._id}
-                onClick={() => goToQuestion(index)}
+                className="stu-btn stu-btn-secondary"
+                disabled={currentIndex === 0}
+                onClick={() => goToQuestion(currentIndex - 1)}
                 type="button"
               >
-                {index + 1}
+                Previous
               </button>
-            ))}
+
+              <button
+                className="stu-btn stu-btn-primary"
+                disabled={currentIndex === questions.length - 1}
+                onClick={() => goToQuestion(currentIndex + 1)}
+                type="button"
+              >
+                Next
+              </button>
+
+              <button className="stu-btn stu-btn-danger" disabled={submitting} onClick={() => submitExam("manual")} type="button">
+                {submitting ? "Submitting..." : "Submit Exam"}
+              </button>
+            </div>
+
+            {saving ? <p className="stu-muted">Saving answer...</p> : null}
+            {error ? <p className="stu-alert stu-alert-error">{error}</p> : null}
           </div>
 
-          <div style={{ marginTop: 12 }}>
-            <p className="muted">Grey: Not Visited</p>
-            <p className="muted">Orange: Visited but Unanswered</p>
-            <p className="muted">Green: Answered</p>
-          </div>
-        </aside>
-      </section>
-    </main>
+          <aside className="stu-card">
+            <h3 className="stu-subtitle">Question Navigator</h3>
+            <div className="stu-nav-grid">
+              {questions.map((question, index) => (
+                <button
+                  className={`stu-nav-btn ${navigatorClass[index]} ${currentIndex === index ? "stu-nav-current" : ""}`}
+                  key={question._id}
+                  onClick={() => goToQuestion(index)}
+                  type="button"
+                >
+                  {index + 1}
+                </button>
+              ))}
+            </div>
+
+            <div className="stu-nav-legend">
+              <p className="stu-muted">Grey: Not visited</p>
+              <p className="stu-muted">Orange: Visited but unanswered</p>
+              <p className="stu-muted">Green: Answered</p>
+            </div>
+          </aside>
+        </section>
+      </main>
+    </div>
   );
 }

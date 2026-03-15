@@ -16,7 +16,7 @@ export default function ResultPage() {
   useEffect(() => {
     const auth = getAuth();
     if (!auth || auth?.user?.role !== "student") {
-      router.push("/student/login");
+      router.push("/student/dashboard");
       return;
     }
 
@@ -28,69 +28,113 @@ export default function ResultPage() {
 
   if (loading) {
     return (
-      <main className="container">
-        <p>Loading result...</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <div className="stu-card">
+            <p className="stu-muted">Loading result...</p>
+          </div>
+        </main>
+      </div>
     );
   }
 
   if (!result) {
     return (
-      <main className="container">
-        <p className="error">{error || "Result not available"}</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <p className="stu-alert stu-alert-error">{error || "Result not available"}</p>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="container">
-      <div className="card">
-        <h1 className="title">Result - {result.examTitle}</h1>
-        <p className="muted">Submission reason: {result.submittedReason}</p>
+    <div className="stu-shell">
+      <header className="stu-header">
+        <div className="stu-header-inner">
+          <div>
+            <div className="stu-brand">Sewa Sakshyam</div>
+            <div className="stu-brand-sub">Candidate Examination Portal</div>
+          </div>
+          <Link className="stu-header-link" href="/student/dashboard">Dashboard</Link>
+        </div>
+      </header>
 
-        <div className="grid grid-2">
-          <div className="card">
-            <h3 className="title">Total Score</h3>
-            <p style={{ fontSize: 28, margin: 0 }}>{result.score}</p>
-          </div>
-          <div className="card">
-            <h3 className="title">Overall Breakdown</h3>
-            <p>Correct: {result.correctCount}</p>
-            <p>Wrong: {result.wrongCount}</p>
-            <p>Unattempted: {result.unattemptedCount}</p>
-          </div>
+      <main className="stu-main">
+        <div className="stu-card stu-panel-title">
+          <h1 className="stu-title">Result: {result.examTitle}</h1>
+          <p className="stu-muted">Submission reason: {result.submittedReason}</p>
         </div>
 
-        <h3>Section-wise Performance</h3>
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Section</th>
-              <th>Total</th>
-              <th>Correct</th>
-              <th>Wrong</th>
-              <th>Unattempted</th>
-            </tr>
-          </thead>
-          <tbody>
-            {result.sectionStats.map((section) => (
-              <tr key={section.sectionId}>
-                <td>{section.sectionName}</td>
-                <td>{section.total}</td>
-                <td>{section.correct}</td>
-                <td>{section.wrong}</td>
-                <td>{section.unattempted}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <section className="stu-stats-grid">
+          <article className="stu-card stu-stat-card">
+            <span>Total Score</span>
+            <strong>{result.score}</strong>
+          </article>
+          <article className="stu-card stu-stat-card">
+            <span>Correct</span>
+            <strong>{result.correctCount}</strong>
+          </article>
+          <article className="stu-card stu-stat-card">
+            <span>Wrong</span>
+            <strong>{result.wrongCount}</strong>
+          </article>
+          <article className="stu-card stu-stat-card">
+            <span>Unattempted</span>
+            <strong>{result.unattemptedCount}</strong>
+          </article>
+        </section>
 
-        <div className="row" style={{ marginTop: 16 }}>
-          <Link className="button" href="/student/dashboard">
-            Back to Dashboard
-          </Link>
-        </div>
-      </div>
-    </main>
+        <section className="stu-card">
+          <h3 className="stu-subtitle">Section-wise Performance</h3>
+          <div className="stu-table-wrap">
+            <table className="stu-table">
+              <thead>
+                <tr>
+                  <th>Section</th>
+                  <th>Total</th>
+                  <th>Correct</th>
+                  <th>Wrong</th>
+                  <th>Unattempted</th>
+                </tr>
+              </thead>
+              <tbody>
+                {result.sectionStats.map((section) => (
+                  <tr key={section.sectionId}>
+                    <td>{section.sectionName}</td>
+                    <td>{section.total}</td>
+                    <td className="stu-cell-correct">{section.correct}</td>
+                    <td className="stu-cell-wrong">{section.wrong}</td>
+                    <td>{section.unattempted}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="stu-actions-row">
+            <Link className="stu-btn stu-btn-primary" href="/student/dashboard">
+              Back to Dashboard
+            </Link>
+          </div>
+        </section>
+      </main>
+    </div>
   );
 }

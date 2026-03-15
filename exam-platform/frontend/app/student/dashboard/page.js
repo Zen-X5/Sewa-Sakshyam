@@ -26,45 +26,72 @@ export default function StudentDashboardPage() {
 
   if (loading) {
     return (
-      <main className="container">
-        <p>Loading exams...</p>
-      </main>
+      <div className="stu-shell">
+        <header className="stu-header">
+          <div className="stu-header-inner">
+            <div>
+              <div className="stu-brand">Sewa Sakshyam</div>
+              <div className="stu-brand-sub">Candidate Examination Portal</div>
+            </div>
+          </div>
+        </header>
+        <main className="stu-main">
+          <div className="stu-card">
+            <p className="stu-muted">Loading examinations...</p>
+          </div>
+        </main>
+      </div>
     );
   }
 
   return (
-    <main className="container">
-      <div className="card row space-between">
-        <div>
-          <h1 className="title">Student Exam Portal</h1>
-          <p className="muted">No login required. Verify email OTP and start when exam countdown reaches zero.</p>
+    <div className="stu-shell">
+      <header className="stu-header">
+        <div className="stu-header-inner">
+          <div>
+            <div className="stu-brand">Sewa Sakshyam</div>
+            <div className="stu-brand-sub">Candidate Examination Portal</div>
+          </div>
+          <Link className="stu-header-link" href="/">
+            Home
+          </Link>
         </div>
-        <Link className="button outline" href="/">
-          Home
-        </Link>
-      </div>
+      </header>
 
-      {error ? <p className="error">{error}</p> : null}
+      <main className="stu-main">
+        <div className="stu-card stu-panel-title">
+          <h1 className="stu-title">Available Examinations</h1>
+          <p className="stu-muted">No login required. Verify your email via OTP and start when the countdown reaches zero.</p>
+        </div>
 
-      <section className="grid grid-2">
-        {exams.map((exam) => (
-          <article className="card" key={exam._id}>
-            <h2 className="title">{exam.title}</h2>
-            <p className="muted">Scheduled: {formatDateTime(exam.scheduledAt)}</p>
-            <p className="muted">Duration: {exam.duration} minutes</p>
-            <p className="muted">
-              Questions: {exam.questionCount} | Sections: {exam.sectionCount}
-            </p>
-            <p className="muted">
-              Marking: +{exam.markingScheme.correct} / {exam.markingScheme.wrong}
-            </p>
+        {error ? <p className="stu-alert stu-alert-error">{error}</p> : null}
 
-            <Link className="button" href={`/student/start/${exam._id}`}>
-              Start Exam
-            </Link>
-          </article>
-        ))}
-      </section>
-    </main>
+        {!exams.length ? (
+          <div className="stu-card">
+            <p className="stu-muted">No exams are available right now. Please check again later.</p>
+          </div>
+        ) : null}
+
+        <section className="stu-exam-grid">
+          {exams.map((exam) => (
+            <article className="stu-card stu-exam-card" key={exam._id}>
+              <h2 className="stu-exam-title">{exam.title}</h2>
+
+              <div className="stu-meta-list">
+                <div className="stu-meta-item"><span>Scheduled</span><strong>{formatDateTime(exam.scheduledAt)}</strong></div>
+                <div className="stu-meta-item"><span>Duration</span><strong>{exam.duration} min</strong></div>
+                <div className="stu-meta-item"><span>Questions</span><strong>{exam.questionCount}</strong></div>
+                <div className="stu-meta-item"><span>Sections</span><strong>{exam.sectionCount}</strong></div>
+                <div className="stu-meta-item"><span>Marking</span><strong>+{exam.markingScheme.correct} / {exam.markingScheme.wrong}</strong></div>
+              </div>
+
+              <Link className="stu-btn stu-btn-primary" href={`/student/start/${exam._id}`}>
+                Start Exam
+              </Link>
+            </article>
+          ))}
+        </section>
+      </main>
+    </div>
   );
 }

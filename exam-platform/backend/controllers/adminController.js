@@ -265,6 +265,51 @@ const deleteQuestion = async (req, res) => {
   }
 };
 
+const deleteExam = async (req, res) => {
+  try {
+    const { examId } = req.params;
+
+    const exam = await Exam.findOne({ _id: examId, createdBy: req.user._id });
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found" });
+    }
+
+    const sections = await Section.find({ examId: exam._id });
+    const sectionIds = sections.map((s) => s._id);
+
+    await Question.deleteMany({ sectionId: { $in: sectionIds } });
+    await Section.deleteMany({ examId: exam._id });
+    await Exam.deleteOne({ _id: exam._id });
+
+    return res.json({ message: "Exam deleted" });
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to delete exam" });
+  }
+};
+
+const updateExam = async (req, res) => {
+  try {
+    const { examId } = req.params;
+    const { title } = req.body;
+
+    if (!title || !title.trim()) {
+      return res.status(400).json({ message: "Exam title is required" });
+    }
+
+    const exam = await Exam.findOne({ _id: examId, createdBy: req.user._id });
+    if (!exam) {
+      return res.status(404).json({ message: "Exam not found" });
+    }
+
+    exam.title = title.trim();
+    await exam.save();
+
+    return res.json(exam);
+  } catch (error) {
+    return res.status(500).json({ message: error.message || "Failed to update exam" });
+  }
+};
+
 const getExamAttempts = async (req, res) => {
   try {
     const { examId } = req.params;
@@ -382,6 +427,8 @@ module.exports = {
   createExam,
   getAdminExams,
   togglePublish,
+  updateExam,
+  deleteExam,
   addSection,
   updateSection,
   deleteSection,

@@ -3,6 +3,8 @@ const {
   createExam,
   getAdminExams,
   togglePublish,
+  updateExam,
+  deleteExam,
   addSection,
   updateSection,
   deleteSection,
@@ -21,6 +23,8 @@ router.use(protect, authorize("admin"));
 router.get("/exams", getAdminExams);
 router.post("/exams", createExam);
 router.patch("/exams/:examId/publish", togglePublish);
+router.patch("/exams/:examId", updateExam);
+router.delete("/exams/:examId", deleteExam);
 router.post("/exams/:examId/sections", addSection);
 router.patch("/sections/:sectionId", updateSection);
 router.delete("/sections/:sectionId", deleteSection);

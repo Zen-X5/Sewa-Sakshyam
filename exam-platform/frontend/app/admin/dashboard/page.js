@@ -41,6 +41,7 @@ export default function AdminDashboardPage() {
 
   const [sectionNames, setSectionNames] = useState({});
   const [editingSectionNames, setEditingSectionNames] = useState({});
+  const [editingExamNames, setEditingExamNames] = useState({});
   const [questionDrafts, setQuestionDrafts] = useState({});
   const [editingQuestionBySection, setEditingQuestionBySection] = useState({});
   const [previewQuestion, setPreviewQuestion] = useState(null);
@@ -307,6 +308,51 @@ export default function AdminDashboardPage() {
     }));
   };
 
+  const deleteExam = async (exam) => {
+    if (!window.confirm(`Delete "${exam.title}" and all its sections and questions? This cannot be undone.`)) {
+      return;
+    }
+    setError("");
+    setMessage("");
+    try {
+      await apiRequest(`/admin/exams/${exam._id}`, { method: "DELETE", token });
+      setMessage("Exam deleted");
+      await loadExams(token);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
+  const startEditExamName = (exam) => {
+    setEditingExamNames((prev) => ({ ...prev, [exam._id]: exam.title }));
+  };
+
+  const cancelEditExamName = (examId) => {
+    setEditingExamNames((prev) => {
+      const next = { ...prev };
+      delete next[examId];
+      return next;
+    });
+  };
+
+  const saveExamName = async (examId) => {
+    const name = (editingExamNames[examId] || "").trim();
+    if (!name) {
+      setError("Exam title is required");
+      return;
+    }
+    setError("");
+    setMessage("");
+    try {
+      await apiRequest(`/admin/exams/${examId}`, { method: "PATCH", token, body: { title: name } });
+      setMessage("Exam renamed");
+      cancelEditExamName(examId);
+      await loadExams(token);
+    } catch (err) {
+      setError(err.message);
+    }
+  };
+
   if (loading) {
     return (
       <div className="adm-shell">
@@ -393,10 +439,24 @@ export default function AdminDashboardPage() {
                 <div className="adm-exam-header">
                   <div className="adm-exam-meta">
                     <div className="adm-exam-title-row">
-                      <h3 className="adm-exam-title">{exam.title}</h3>
-                      <span className={`adm-badge ${exam.published ? "adm-badge-published" : "adm-badge-draft"}`}>
-                        {exam.published ? "Published" : "Draft"}
-                      </span>
+                      {editingExamNames[exam._id] !== undefined ? (
+                        <>
+                          <input className="input" style={{ maxWidth: 320 }}
+                            value={editingExamNames[exam._id]}
+                            onChange={(e) => setEditingExamNames((p) => ({ ...p, [exam._id]: e.target.value }))}
+                            onKeyDown={(e) => { if (e.key === "Enter") saveExamName(exam._id); if (e.key === "Escape") cancelEditExamName(exam._id); }}
+                            autoFocus />
+                          <button className="adm-btn adm-btn-primary adm-btn-sm" onClick={() => saveExamName(exam._id)} type="button">Save</button>
+                          <button className="adm-btn adm-btn-outline adm-btn-sm" onClick={() => cancelEditExamName(exam._id)} type="button">Cancel</button>
+                        </>
+                      ) : (
+                        <>
+                          <h3 className="adm-exam-title">{exam.title}</h3>
+                          <span className={`adm-badge ${exam.published ? "adm-badge-published" : "adm-badge-draft"}`}>
+                            {exam.published ? "Published" : "Draft"}
+                          </span>
+                        </>
+                      )}
                     </div>
                     <div className="adm-exam-chips">
                       <span className="adm-chip">⏱ {exam.duration} min</span>
@@ -414,7 +474,11 @@ export default function AdminDashboardPage() {
                       onClick={() => router.push(`/admin/results/${exam._id}`)} type="button">
                       Results &amp; Attempts
                     </button>
-                    <button className="adm-btn adm-btn-ghost adm-expand-btn"
+                    {editingExamNames[exam._id] === undefined && (
+                      <button className="adm-btn adm-btn-outline" onClick={() => startEditExamName(exam)} type="button">Rename</button>
+                    )}
+                    <button className="adm-btn adm-btn-danger" onClick={() => deleteExam(exam)} type="button">Delete</button>
+                    <button className="adm-btn adm-btn-outline adm-expand-btn"
                       onClick={() => toggleExamExpanded(exam._id)} type="button">
                       {isExpanded ? "▲ Collapse" : "▼ Expand"}
                     </button>
@@ -461,9 +525,9 @@ export default function AdminDashboardPage() {
                             </div>
                             <div className="row" style={{ gap: 6 }}>
                               {!isEditingSectionName && (
-                                <button className="adm-btn adm-btn-ghost" onClick={() => startEditSectionName(section)} type="button">Rename</button>
+                                <button className="adm-btn adm-btn-outline adm-btn-sm" onClick={() => startEditSectionName(section)} type="button">Rename</button>
                               )}
-                              <button className="adm-btn adm-btn-danger" onClick={() => deleteSection(section._id)} type="button">Delete</button>
+                              <button className="adm-btn adm-btn-danger adm-btn-sm" onClick={() => deleteSection(section._id)} type="button">Delete</button>
                             </div>
                           </div>
 

@@ -12,8 +12,20 @@ export default function InstructionsRedirectPage() {
   }, [params.examId, router]);
 
   return (
-    <main className="container">
-      <p>Redirecting to start page...</p>
-    </main>
+    <div className="stu-shell">
+      <header className="stu-header">
+        <div className="stu-header-inner">
+          <div>
+            <div className="stu-brand">Sewa Sakshyam</div>
+            <div className="stu-brand-sub">Candidate Examination Portal</div>
+          </div>
+        </div>
+      </header>
+      <main className="stu-main">
+        <div className="stu-card">
+          <p className="stu-muted">Redirecting to exam start page...</p>
+        </div>
+      </main>
+    </div>
   );
 }
